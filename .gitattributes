@@ -1,0 +1,21 @@
+# Line endings are a property of the repository, not of each machine's git config.
+#
+# core.autocrlf=true is common on Windows and would otherwise check out the
+# shell scripts with CRLF, which breaks the shebang and `set -euo pipefail`.
+* text=auto eol=lf
+
+# Shell and Python must stay LF on every platform.
+*.sh text eol=lf
+*.py text eol=lf
+
+# Never touch binaries.
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.db binary
