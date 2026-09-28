@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import type { MemoryTrace } from '../api'
+import type { MemoryTrace } from '../types'
 import { describeMemoryState, MemoryStatusBadge } from './MemoryStatusBadge'
 
 function trace(overrides: Partial<MemoryTrace> = {}): MemoryTrace {
@@ -8,6 +8,8 @@ function trace(overrides: Partial<MemoryTrace> = {}): MemoryTrace {
     trace_id: 't1',
     operation: 'recall',
     mode: 'on',
+    started_at: '2026-09-22T15:02:00.000Z',
+    finished_at: '2026-09-22T15:02:00.120Z',
     success: true,
     degraded: false,
     bank_id: 'dejaops-prod',
@@ -18,6 +20,7 @@ function trace(overrides: Partial<MemoryTrace> = {}): MemoryTrace {
     error_message: null,
     query: 'checkout latency',
     tags: ['service:checkout-api'],
+    min_score: 0.2,
     no_match: false,
     ...overrides,
   }
