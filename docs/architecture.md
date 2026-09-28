@@ -488,8 +488,8 @@ what fails.
 
 Consequences, stated plainly:
 
-- the primary model's failures still fall back, but the fallback often cannot complete a tool loop,
-  so a fallback run frequently ends in an honest `AllModelsFailedError` rather than a worse answer
+- the primary model's failures still fall back, but the fallback's tool loop is unreliable: measured
+  2 of 4 runs completed and 2 ended in an honest `AllModelsFailedError` rather than a worse answer
 - `tool_choice="auto"` is already set, so this is not a missing request parameter
 - the classification is unchanged. `tool_use_failed` is a 400 and is treated as permanent. Retrying
   a stochastic formatting failure *might* help, but that is a hypothesis, and it will not be
@@ -497,3 +497,35 @@ Consequences, stated plainly:
 
 The failure is honest either way: the run reports `model_failed`, the timeline says so, and no
 fabricated diagnosis is produced.
+
+### 10.7 The first measured run: partial, and on the fallback
+
+Four incidents, one pattern, cutoffs 2 through 5. Two produced an answer.
+
+| cutoff K | incident | status | model | cause@1 | fix@1 | grounded | steps |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 2 | INC-1008 | `model_failed` | `qwen/qwen3.8-27b` | — | — | — | 2 |
+| 3 | INC-1016 | `model_failed` | `qwen/qwen3.8-27b` | — | — | — | 3 |
+| 4 | INC-1019 | `completed` | `qwen/qwen3.8-27b` | hit `RC-007` | hit `RB-018` | yes, 8 cited | 5 |
+| 5 | INC-1029 | `completed` | `qwen/qwen3.8-27b` | hit `RC-007` | hit `RB-018` | yes, 8 cited | 5 |
+
+Rates over the two scored runs: Root Cause Hit@1 `1.0`, Validated Fix Hit@1 `1.0`, Grounded Response
+Rate `1.0`, mean steps `5.0`.
+
+**What this does not show.** It does not show the learning curve. The two cutoffs that would show
+its shape are exactly the two that failed: cutoff 2 holds no validated fix at all, and cutoff 3 is
+where the first one appears. The two runs that completed are the two easiest points, where the
+answer has been in history for several occurrences. Two perfect scores at the easy end are not
+evidence of a curve, and are not reported as one.
+
+**And every one of the four ran on the fallback.** The primary was rate-limited for all of them, so
+these are fallback numbers. The product ships with `openai/gpt-oss-120b` as primary, so these do not
+characterise the shipped configuration either.
+
+What it does show is that the upper end works end to end: with a confirmed outcome in history the
+agent named the correct cause, proposed the correct runbook, and cited eight memories that support
+it — and the grounded check confirmed those citations by provenance rather than by the model's
+account of them.
+
+The two failures are retried automatically on the next invocation, because incomplete records are
+not cache hits. The curve is complete when cutoffs 2 and 3 produce answers.
