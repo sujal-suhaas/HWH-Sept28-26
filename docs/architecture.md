@@ -475,8 +475,12 @@ evaluated incidents, so **it cannot complete in one day on the free tier** — i
 or several days of resuming. `--limit`, `--cutoff` and `--pace` exist for that, and the JSONL cache
 makes each day additive rather than restarting.
 
-This is a constraint on the measurement, not a result. No curve numbers are recorded here until a
-run produces them.
+A run that ends in `model_failed` is not cached, so a rate-limited incident is retried on the next
+invocation rather than frozen into the curve as an absence. The cache key includes the model, so a
+run on the fallback is never reused as a run of the primary — see §10.8.
+
+This is a constraint on the measurement, not a result. §10.7 records the one pattern ladder and the
+one teach replay that have actually been run; a full six-pattern curve has not.
 
 ### 10.6 A finding the evaluation surfaced: the fallback cannot reliably call tools
 
@@ -490,6 +494,8 @@ Consequences, stated plainly:
 
 - the primary model's failures still fall back, but the fallback's tool loop is unreliable: measured
   2 of 4 runs completed and 2 ended in an honest `AllModelsFailedError` rather than a worse answer
+- the runs in §10.7 all used the primary, so this affects the fallback path only and does not
+  qualify the measured curve
 - `tool_choice="auto"` is already set, so this is not a missing request parameter
 - the classification is unchanged. `tool_use_failed` is a 400 and is treated as permanent. Retrying
   a stochastic formatting failure *might* help, but that is a hypothesis, and it will not be
@@ -498,38 +504,99 @@ Consequences, stated plainly:
 The failure is honest either way: the run reports `model_failed`, the timeline says so, and no
 fabricated diagnosis is produced.
 
-### 10.7 The first measured run: partial, and on the fallback
+### 10.7 The measured curve, and the measured teach replay
 
-Four incidents, one pattern, cutoffs 2 through 5. Two produced an answer.
+Both runs below were made on **`openai/gpt-oss-120b`**, the shipped primary. `fallback_runs` is `0`
+and `models_used` is `["openai/gpt-oss-120b"]`, so these characterise the shipped configuration.
 
-| cutoff K | incident | status | model | cause@1 | fix@1 | grounded | steps |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 2 | INC-1008 | `model_failed` | `qwen/qwen3.8-27b` | — | — | — | 2 |
-| 3 | INC-1016 | `model_failed` | `qwen/qwen3.8-27b` | — | — | — | 3 |
-| 4 | INC-1019 | `completed` | `qwen/qwen3.8-27b` | hit `RC-007` | hit `RB-018` | yes, 8 cited | 5 |
-| 5 | INC-1029 | `completed` | `qwen/qwen3.8-27b` | hit `RC-007` | hit `RB-018` | yes, 8 cited | 5 |
+**The curve.** One pattern (`RC-007`, fraud-scorer), cutoffs 2 through 5, evaluated on the next
+occurrence of the pattern with strictly earlier history.
 
-Rates over the two scored runs: Root Cause Hit@1 `1.0`, Validated Fix Hit@1 `1.0`, Grounded Response
-Rate `1.0`, mean steps `5.0`.
+| cutoff K | incident | status | cause@1 | fix@1 | grounded | steps |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2 | INC-1008 | `completed` | miss | miss | yes | 6 |
+| 3 | INC-1016 | `completed` | **hit `RC-007`** | miss | yes | 5 |
+| 4 | INC-1019 | `completed` | hit `RC-007` | **hit `RB-018`** | yes | 6 |
+| 5 | INC-1029 | `completed` | hit `RC-007` | hit `RB-018` | yes | 6 |
 
-**What this does not show.** It does not show the learning curve. The two cutoffs that would show
-its shape are exactly the two that failed: cutoff 2 holds no validated fix at all, and cutoff 3 is
-where the first one appears. The two runs that completed are the two easiest points, where the
-answer has been in history for several occurrences. Two perfect scores at the easy end are not
-evidence of a curve, and are not reported as one.
+Rates per cutoff: cause@1 `0.00 → 1.00 → 1.00 → 1.00`; fix@1 `0.00 → 0.00 → 1.00 → 1.00`;
+grounded `1.00` throughout. Overall over the four scored runs: Root Cause Hit@1 `0.75`,
+Validated Fix Hit@1 `0.5`, Grounded Response Rate `1.0`, mean steps `5.75`, `n_incomplete` `0`.
 
-**And every one of the four ran on the fallback.** The primary was rate-limited for all of them, so
-these are fallback numbers. The product ships with `openai/gpt-oss-120b` as primary, so these do not
-characterise the shipped configuration either.
+**What this shows.** The shape is monotone and it lands where the data says it should. At cutoff 2
+history holds no validated fix for this pattern at all — the labels record the first occurrence as
+`inconclusive` and the second as `rejected` — and the agent gets neither the cause nor the fix. At
+cutoff 3 the first confirmed fix exists and the cause appears. At cutoff 4 the fix appears too, and
+both hold. That is the mechanism the project claims: later occurrences become diagnosable because
+confirmed outcomes accumulated, not because the alert text repeats an answer.
 
-What it does show is that the upper end works end to end: with a confirmed outcome in history the
-agent named the correct cause, proposed the correct runbook, and cited eight memories that support
-it — and the grounded check confirmed those citations by provenance rather than by the model's
-account of them.
+**What this does not show.** `n = 1` per cutoff — one incident per point, one pattern out of six.
+Four runs, each a different incident, so the steps between cutoffs are not a controlled comparison.
+This is an illustration of the mechanism, not an estimate of a rate. It is not reported as a
+benchmark and no target was set for it in advance.
 
-The two failures are retried automatically on the next invocation, because incomplete records are
-not cache hits. The curve is complete when cutoffs 2 and 3 produce answers.
+**The teach replay.** `data/demo/novel_incident.json` (`DEMO-001`), the same alert run before and
+after an explicit operator teach, same model, same prompt, same bank lifecycle (the bank is deleted
+and recreated first, so the before run cannot see a stale teach).
 
-`--mode teach` was attempted on the same day and both of its runs also ended in `model_failed` for
-the same reason. Its mechanism is tested without a model in `tests/api/test_teach_replay.py`; the
-live before/after result is not yet measured.
+| | before teach | after teach |
+| --- | --- | --- |
+| Root Cause Hit@1 | `False` | **`True`** |
+| Validated Fix Hit@1 | `False` | **`True`** |
+| Grounded Response Rate | `False` | **`True`** |
+| cited memories | 0 | 2 |
+| named root cause | `None` | **`RC-009`** |
+
+Learning gain (Root Cause Hit@1): **+1**. Before the teach the bank holds no memory of this cause —
+verified independently in `tests/data/test_demo_scenario.py`, which asserts the demo ground truth is
+absent at every history cutoff including the full bank. After the teach the agent names `RC-009` and
+cites the memory the teach created.
+
+### 10.8 Two bugs the measurement found, and how each showed up
+
+Neither of these was visible from a passing test suite. Both were found by running the thing and
+reading the record, which is the only reason the curve and the replay above exist at all.
+
+**1. The cause id reached the lookup path but not the recall path.** `_render_hits` annotates a
+runbook hit with the cause it treats, so the model can put an id in `suspected_root_cause_id` rather
+than invent one. `lookup_runbook` passed the catalog; `recall_similar_incidents` did not. Recall is
+the primary path, so on a live replay the model retrieved the taught fix, cited it correctly, and
+still could not name the cause.
+
+The first teach replay recorded exactly that, and it is still in the log:
+
+```
+teach_after  cut=0 DEMO-001  completed  openai/gpt-oss-120b  cause=False fix=True   <- named=None
+teach_after  cut=0 DEMO-001  completed  openai/gpt-oss-120b  cause=True  fix=True   <- named=RC-009
+```
+
+The identical alert, the identical model, the identical bank lifecycle, one line apart. The only
+difference is the one-word fix. The regression test that should have caught it tested
+`lookup_runbook` only — the annotated path — so it passed throughout. The new test pins the
+invariant across *every* tool that renders a hit, not the two call sites that happened to pass it.
+
+This is the failure mode the project was most exposed to: a grounding rule that holds on one path
+and quietly does not on another, where the symptom is a metric that simply never moves and nothing
+anywhere reports an error.
+
+**2. The cache key omitted the model.** `_key` was `(mode, cutoff, memory_mode, incident_id)`, so a
+completed run on the fallback was a cache hit for a run of the primary. Since whether the primary
+gets rate-limited is provider weather, that would have mixed two models into one curve and made
+part of its shape noise — and §10.7 above would have silently been a hybrid rather than a
+measurement of the shipped configuration. The key now includes `model_used`, and the curve asks for
+the configured primary by name, so a fallback record does not match and is re-run. `models_used`
+and `fallback_runs` are reported alongside the rates so a partly-fallen-back curve cannot look
+uniform.
+
+The fix is what forced this run to be clean: the earlier fallback records for cutoffs 4 and 5 were
+on disk, and under the old key they would have been reused as primary runs.
+
+### 10.9 What a full curve would cost
+
+26 pairs across six patterns. At roughly 20k tokens per incident against a 200k daily token limit
+on the free tier, a full curve is several days of runs. The cache is resumable and keyed per model,
+so progress accumulates and an interrupted run is retried rather than lost.
+
+What is recorded here is one complete pattern ladder plus one complete teach replay, both on the
+primary. A full six-pattern curve has not been run, and no figure in this document should be read as
+though it had.

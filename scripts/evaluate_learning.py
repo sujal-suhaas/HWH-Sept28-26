@@ -281,6 +281,7 @@ def compute_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
         "grounded_response_rate": _rate(sum(1 for r in completed if r["grounded"]), total),
         "mean_steps": round(sum(r["steps"] for r in completed) / total, 2) if total else None,
         "fallback_runs": sum(1 for r in completed if r["used_fallback"]),
+        "models_used": sorted({r["model_used"] for r in completed}),
     }
 
 
@@ -295,7 +296,31 @@ def metrics_by_cutoff(records: list[dict[str, Any]]) -> dict[int, dict[str, Any]
 # Cache
 # --------------------------------------------------------------------------
 def _key(record: dict[str, Any]) -> tuple:
-    return (record["mode"], record["cutoff"], record["memory_mode"], record["incident_id"])
+    return (
+        record["mode"],
+        record["cutoff"],
+        record["memory_mode"],
+        record["incident_id"],
+        record["model_used"],
+    )
+
+
+def cached_curve_run(
+    cached: dict[tuple, dict[str, Any]],
+    cutoff: int,
+    memory_mode: str,
+    incident_id: str,
+    model: str,
+) -> dict[str, Any] | None:
+    """A cached run counts only if it ran the configured primary model.
+
+    A fallback run is a different treatment, not the same one luckier. Reusing
+    it would mix two models into one curve, and since whether the primary gets
+    rate-limited is provider weather rather than anything about the memory, the
+    resulting shape would be partly noise. Ask for the primary by name; a
+    fallback record simply does not match and gets re-run.
+    """
+    return cached.get(("curve", cutoff, memory_mode, incident_id, model))
 
 
 def load_cache(path: Path) -> dict[tuple, dict[str, Any]]:
@@ -391,7 +416,9 @@ def mode_curve(
     try:
         for cutoff, incident_id in pairs:
             incident, label = by_id[incident_id], labels[incident_id]
-            hit = cached.get(("curve", cutoff, args.memory_mode, incident_id))
+            hit = cached_curve_run(
+                cached, cutoff, args.memory_mode, incident_id, settings.groq_model_primary
+            )
             if hit is not None:
                 records.append(hit)
                 continue

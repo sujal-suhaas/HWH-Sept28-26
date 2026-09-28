@@ -427,3 +427,94 @@ def test_a_degraded_recall_is_visible_in_the_trace_not_hidden() -> None:
     assert all(trace["degraded"] for trace in recalls)
     # And the incident says nothing was found, without claiming no precedent exists.
     assert created["state"] == IncidentState.WAITING_FOR_OPERATOR.value
+
+
+# --- §13: a bad alert payload is a 4xx with a usable message ------------------
+
+
+def test_a_wrong_typed_field_is_rejected_with_422() -> None:
+    """`service` as a list is a client bug; say which field, don't 500."""
+    body = alert_body()
+    body["alert"]["service"] = ["checkout-api"]  # type: ignore[index]
+
+    with make_client(llm=FakeLLM([])) as client:
+        response = client.post("/alerts", json=body)
+
+    assert response.status_code == 422
+    assert "service" in str(response.json())
+
+
+def test_a_wrong_typed_list_field_is_rejected_with_422() -> None:
+    body = alert_body()
+    body["alert"]["error_samples"] = "not-a-list"  # type: ignore[index]
+
+    with make_client(llm=FakeLLM([])) as client:
+        response = client.post("/alerts", json=body)
+
+    assert response.status_code == 422
+    assert "error_samples" in str(response.json())
+
+
+def test_an_overlong_title_is_rejected_with_422() -> None:
+    body = alert_body(title="x" * 301)
+
+    with make_client(llm=FakeLLM([])) as client:
+        response = client.post("/alerts", json=body)
+
+    assert response.status_code == 422
+    assert "title" in str(response.json())
+
+
+def test_an_overlong_summary_is_rejected_with_422() -> None:
+    body = alert_body(summary="x" * 2001)
+
+    with make_client(llm=FakeLLM([])) as client:
+        response = client.post("/alerts", json=body)
+
+    assert response.status_code == 422
+    assert "summary" in str(response.json())
+
+
+def test_a_non_json_body_is_rejected_with_422() -> None:
+    with make_client(llm=FakeLLM([])) as client:
+        response = client.post(
+            "/alerts", content=b"this is not json", headers={"content-type": "application/json"}
+        )
+
+    assert response.status_code == 422
+
+
+def test_a_json_array_body_is_rejected_with_422() -> None:
+    """A list is valid JSON but not a request body."""
+    with make_client(llm=FakeLLM([])) as client:
+        assert client.post("/alerts", json=[1, 2, 3]).status_code == 422
+
+
+def test_a_bad_payload_creates_no_incident() -> None:
+    """Validation must run before anything is persisted."""
+    with make_client(llm=FakeLLM([])) as client:
+        before = client.get("/incidents").json()
+        client.post("/alerts", json={"alert": {"service": ""}})
+        after = client.get("/incidents").json()
+
+    assert before == after
+
+
+def test_an_unparseable_timestamp_is_rejected_with_422() -> None:
+    body = alert_body(fired_at="last tuesday")
+
+    with make_client(llm=FakeLLM([])) as client:
+        response = client.post("/alerts", json=body)
+
+    assert response.status_code == 422
+    assert "fired_at" in str(response.json())
+
+
+def test_an_unknown_memory_mode_is_rejected_with_422() -> None:
+    body = alert_body(memory_mode="maybe")
+
+    with make_client(llm=FakeLLM([])) as client:
+        response = client.post("/alerts", json=body)
+
+    assert response.status_code == 422
+    assert "memory_mode" in str(response.json())

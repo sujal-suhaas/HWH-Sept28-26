@@ -601,6 +601,46 @@ def test_a_runbook_hit_is_annotated_with_the_cause_it_treats(memory_with_history
     assert "root_cause_id=RC-014" in outcome.summary
 
 
+def test_a_recalled_runbook_is_annotated_with_the_cause_it_treats(
+    memory_with_history, catalog
+) -> None:
+    """Recall is the primary path, so it must carry the cause too.
+
+    Only lookup_runbook was annotated. On a live teach replay the model recalls
+    the taught fix, cites it, and still cannot name the cause, so Root Cause
+    Hit@1 never moves after a teach - while the lookup-path test passes. The
+    annotation has to travel with every rendered hit, not just one tool's.
+    """
+    ctx = _ctx(memory_with_history, catalog)
+    outcome = execute_tool_call(
+        "recall_similar_incidents",
+        RecallSimilarIncidentsArgs(
+            service="checkout-api", symptom="checkout latency after a ledger deploy"
+        ),
+        ctx,
+    )
+
+    assert "runbook_id=RB-014" in outcome.summary
+    assert "root_cause_id=RC-014" in outcome.summary
+
+
+def test_every_rendered_hit_carries_the_cause_it_treats(
+    memory_with_history, catalog
+) -> None:
+    """Pin the invariant rather than the two call sites that happen to pass it."""
+    ctx = _ctx(memory_with_history, catalog)
+    for tool, args in (
+        ("lookup_runbook", LookupRunbookArgs(suspected_cause="kafka consumer lag")),
+        (
+            "recall_similar_incidents",
+            RecallSimilarIncidentsArgs(service="checkout-api", symptom="checkout latency"),
+        ),
+    ):
+        summary = execute_tool_call(tool, args, ctx).summary
+        assert "runbook_id=RB-014" in summary, tool
+        assert "root_cause_id=RC-014" in summary, tool
+
+
 # --------------------------------------------------------------------------
 # Proposal tools: the critical safety property
 # --------------------------------------------------------------------------

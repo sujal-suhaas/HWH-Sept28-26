@@ -326,7 +326,16 @@ def _outcome_query(service: str, text: str) -> str:
     return f"{service} {' '.join(text.split()[:_OUTCOME_QUERY_WORDS])}"
 
 
-def _render_hits(hits: list[RecallHit], catalog: Catalog | None = None) -> str:
+def _render_hits(hits: list[RecallHit], catalog: Catalog) -> str:
+    """Render recalled hits for the model, annotating the ids it may cite.
+
+    ``catalog`` is required, not optional. It was optional once, and
+    ``recall_similar_incidents`` simply omitted it - so a recalled runbook
+    carried its ``runbook_id`` but not the cause that runbook treats, and the
+    model could retrieve the fix without ever being able to name the cause. That
+    is invisible: no error, just a metric that never moves. Requiring the
+    argument turns the same omission into a TypeError at the first call.
+    """
     lines = []
     for hit in hits:
         line = f"- [{hit.memory_id}] {hit.text}"
@@ -339,10 +348,9 @@ def _render_hits(hits: list[RecallHit], catalog: Catalog | None = None) -> str:
             annotations.append(f"runbook_id={hit.runbook_id}")
             # A runbook treats exactly one cause, so the cause id travels with it.
             # Without this the model sees the fix but not the cause it addresses.
-            if catalog is not None:
-                runbook = catalog.runbook(hit.runbook_id)
-                if runbook is not None:
-                    annotations.append(f"root_cause_id={runbook.root_cause_id}")
+            runbook = catalog.runbook(hit.runbook_id)
+            if runbook is not None:
+                annotations.append(f"root_cause_id={runbook.root_cause_id}")
         if hit.incident_id:
             annotations.append(f"incident_id={hit.incident_id}")
         if not hit.metadata:
@@ -404,9 +412,11 @@ def handle_recall_similar_incidents(
     ctx.record_hits(hits)
     sections = []
     if history.hits:
-        sections.append("Similar past incidents:\n" + _render_hits(history.hits))
+        sections.append("Similar past incidents:\n" + _render_hits(history.hits, ctx.catalog))
     if outcomes.hits:
-        sections.append("Validated outcomes for this service:\n" + _render_hits(outcomes.hits))
+        sections.append(
+            "Validated outcomes for this service:\n" + _render_hits(outcomes.hits, ctx.catalog)
+        )
     return ToolOutcome(
         summary=(
             f"{len(hits)} relevant historical memories for {args.service}:\n\n"
