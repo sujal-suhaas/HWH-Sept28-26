@@ -1,0 +1,52 @@
+{
+  "root_causes": [
+    {
+      "id": "RC-001",
+      "name": "kafka_consumer_lag",
+      "summary": "Kafka consumer lag on payments-ledger after a deploy or nightly batch",
+      "detail": "A payments-ledger deploy or the nightly settlement batch pushed far more events through the payments topic than the consumer group could drain. Lag crossed the alerting threshold and checkout requests that wait on ledger confirmation timed out."
+    },
+    {
+      "id": "RC-002",
+      "name": "redis_failover_flap",
+      "summary": "Redis sentinel failover flap caused connection churn",
+      "detail": "A redis-cache sentinel failover flapped between replicas. Clients reconnected repeatedly, so connection setup cost dominated latency and cache hit rate collapsed."
+    },
+    {
+      "id": "RC-003",
+      "name": "tls_cert_expiry",
+      "summary": "Expired internal TLS certificate on auth-service",
+      "detail": "The internal TLS certificate used between the edge and auth-service expired. Handshakes failed and token validation returned 5xx for a share of requests."
+    },
+    {
+      "id": "RC-004",
+      "name": "deploy_regression_latency",
+      "summary": "payments-ledger v1.8.3 added a synchronous ledger write on the checkout path",
+      "detail": "payments-ledger v1.8.3 introduced a synchronous write to the ledger audit table inside the checkout request path. The write serialised behind a hot row lock and inflated p99 latency without any infrastructure saturation."
+    },
+    {
+      "id": "RC-005",
+      "name": "connection_pool_exhaustion",
+      "summary": "checkout-api database connection pool exhausted under burst traffic",
+      "detail": "A traffic burst plus slow ledger calls held every connection in the checkout-api pool. New requests queued for a connection instead of failing fast."
+    },
+    {
+      "id": "RC-006",
+      "name": "webhook_retry_storm",
+      "summary": "webhook-dispatcher retry storm amplified downstream load",
+      "detail": "webhook-dispatcher retried failed deliveries immediately and without a cap, multiplying load on payments-ledger until the ledger degraded for real traffic."
+    },
+    {
+      "id": "RC-007",
+      "name": "fraud_scorer_model_timeout",
+      "summary": "fraud-scorer model inference exceeded its timeout budget",
+      "detail": "A newly promoted fraud model exceeded the inference timeout budget. Requests fell back to the slow rule engine, which pushed checkout p99 over SLO."
+    },
+    {
+      "id": "RC-008",
+      "name": "cache_stampede",
+      "summary": "Redis cache stampede after bulk key eviction",
+      "detail": "A memory-pressure eviction dropped a hot key set at once. Every in-flight request rebuilt the same entries concurrently, saturating payments-ledger."
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "incident_id": "DEMO-001",
+  "service": "webhook-dispatcher",
+  "severity": "p1",
+  "incident_type": "data_corruption",
+  "environment": "prod",
+  "opened_at": "2026-09-21T15:00:00Z",
+  "channel": "#platform-oncall",
+  "operator": "m.iyer",
+  "is_demo": true,
+  "alert": {
+    "title": "webhook signature verification failing for in-flight deliveries",
+    "summary": "webhook-dispatcher delivery failure rate 38%. Every failure is a signature verification error, and only for deliveries queued before the key rotation.",
+    "source": "pagerduty-sim",
+    "fired_at": "2026-09-21T15:00:00Z",
+    "signals": {
+      "error_samples": [
+        "webhook_signature_verification_failed_total 18420",
+        "ERROR SignatureMismatch: payload signature does not match any active key",
+        "webhook_delivery_failure_rate 0.38"
+      ]
+    }
+  },
+  "error_messages": [
+    "webhook_signature_verification_failed_total 18420",
+    "ERROR SignatureMismatch: payload signature does not match any active key",
+    "webhook_delivery_failure_rate 0.38"
+  ],
+  "timeline": [
+    {
+      "at": "2026-09-21T15:00:00Z",
+      "actor": "pager",
+      "event": "alert_fired",
+      "detail": "webhook-dispatcher alert fired"
+    },
+    {
+      "at": "2026-09-21T15:03:00Z",
+      "actor": "operator",
+      "event": "acknowledged",
+      "detail": "Incident acknowledged, triage started"
+    },
+    {
+      "at": "2026-09-21T15:04:00Z",
+      "actor": "agent",
+      "event": "recall",
+      "detail": "Recalled prior incidents for webhook-dispatcher"
+    }
+  ],
+  "operator_notes": [
+    "Signature verification is the dominant error, not a retry storm.",
+    "The signing key was rotated without a dual-key overlap window."
+  ],
+  "diagnosis": {
+    "proposed_by": "agent",
+    "hypothesis": "Uncertain: no matching historical incident for signature verification failures",
+    "outcome": "pending",
+    "actual_root_cause_id": "RC-009"
+  },
+  "resolution": {
+    "fix": "Restore the previous signing key alongside the new key for a 24h overlap window, then drain the retry queue",
+    "verified": true,
+    "time_to_resolve_minutes": 47,
+    "validated_runbook_id": "RB-051"
+  },
+  "hidden_ground_truth": {
+    "root_cause_id": "RC-009",
+    "root_cause": "webhook signing key rotated without a dual-key overlap window",
+    "validated_runbook_id": "RB-051",
+    "validated_fix": "Restore the previous signing key alongside the new key for a 24h overlap window, then drain the retry queue"
+  }
+}

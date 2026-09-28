@@ -1,0 +1,21 @@
+{
+  "company": "NimbusPay",
+  "seed": 1337,
+  "generated_by": "scripts/generate_data.py",
+  "incident_count": 52,
+  "postmortem_count": 8,
+  "confirmed_count": 26,
+  "inconclusive_count": 26,
+  "service_counts": {
+    "fraud-scorer": 8,
+    "kafka-bus": 5,
+    "payments-ledger": 5,
+    "redis-cache": 9,
+    "webhook-dispatcher": 6,
+    "checkout-api": 12,
+    "auth-service": 7
+  },
+  "window_start": "2026-07-28T11:36:00Z",
+  "window_end": "2026-09-08T12:02:00Z",
+  "demo_incident_id": "DEMO-001"
+}

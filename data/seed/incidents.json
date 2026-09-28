@@ -1,0 +1,4584 @@
+{
+  "company": "NimbusPay",
+  "incidents": [
+    {
+      "incident_id": "INC-1001",
+      "service": "fraud-scorer",
+      "severity": "p2",
+      "incident_type": "latency",
+      "environment": "prod",
+      "opened_at": "2026-07-28T11:36:00Z",
+      "channel": "#platform-oncall",
+      "operator": "m.iyer",
+      "pattern_key": "fraud_model_timeout",
+      "pattern_occurrence": 1,
+      "alert": {
+        "title": "fraud-scorer inference latency above budget",
+        "summary": "fraud-scorer p99 1.8s against a 250ms budget after a model promotion.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-07-28T11:36:00Z",
+        "signals": {
+          "error_samples": [
+            "model_inference_timeout_total 3120",
+            "WARN RuleEngineFallback: engaged for 22% of requests"
+          ]
+        }
+      },
+      "error_messages": [
+        "model_inference_timeout_total 3120",
+        "WARN RuleEngineFallback: engaged for 22% of requests"
+      ],
+      "timeline": [
+        {
+          "at": "2026-07-28T11:36:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "fraud-scorer alert fired"
+        },
+        {
+          "at": "2026-07-28T11:43:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-07-28T11:44:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-07-28T11:52:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Initial hypothesis: kafka consumer lag"
+        },
+        {
+          "at": "2026-07-28T12:21:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Manual mitigation applied for RC-007; runbook not yet promoted"
+        },
+        {
+          "at": "2026-07-28T12:25:00Z",
+          "actor": "operator",
+          "event": "inconclusive",
+          "detail": "Symptoms cleared without a confirmed cause"
+        },
+        {
+          "at": "2026-07-28T12:31:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like kafka consumer lag at first glance.",
+        "Cause not confirmed before symptoms cleared."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Initial hypothesis: kafka consumer lag",
+        "outcome": "inconclusive",
+        "actual_root_cause_id": null
+      },
+      "resolution": {
+        "fix": "Manual mitigation applied for RC-007; runbook not yet promoted",
+        "verified": false,
+        "time_to_resolve_minutes": 55,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1002",
+      "service": "kafka-bus",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "environment": "prod",
+      "opened_at": "2026-07-29T15:44:00Z",
+      "channel": "#payments-oncall",
+      "operator": "k.novak",
+      "pattern_key": "nightly_batch_kafka_lag",
+      "pattern_occurrence": 1,
+      "alert": {
+        "title": "Kafka consumer lag on payments topic",
+        "summary": "payments-ledger consumer group lag 96k and climbing, coinciding with the nightly settlement batch.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-07-29T15:44:00Z",
+        "signals": {
+          "error_samples": [
+            "kafka_consumer_lag{group=payments-ledger} 96412",
+            "WARN SettlementBatchJob: batch volume 3.4x hourly median"
+          ]
+        }
+      },
+      "error_messages": [
+        "kafka_consumer_lag{group=payments-ledger} 96412",
+        "WARN SettlementBatchJob: batch volume 3.4x hourly median"
+      ],
+      "timeline": [
+        {
+          "at": "2026-07-29T15:44:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "kafka-bus alert fired"
+        },
+        {
+          "at": "2026-07-29T15:45:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-07-29T15:46:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-07-29T15:55:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Initial hypothesis: broker disk saturation"
+        },
+        {
+          "at": "2026-07-29T16:51:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Manual mitigation applied for RC-001; runbook not yet promoted"
+        },
+        {
+          "at": "2026-07-29T16:55:00Z",
+          "actor": "operator",
+          "event": "inconclusive",
+          "detail": "Symptoms cleared without a confirmed cause"
+        },
+        {
+          "at": "2026-07-29T17:02:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like broker disk saturation at first glance.",
+        "Cause not confirmed before symptoms cleared."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Initial hypothesis: broker disk saturation",
+        "outcome": "inconclusive",
+        "actual_root_cause_id": null
+      },
+      "resolution": {
+        "fix": "Manual mitigation applied for RC-001; runbook not yet promoted",
+        "verified": false,
+        "time_to_resolve_minutes": 78,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1003",
+      "service": "payments-ledger",
+      "severity": "p1",
+      "incident_type": "latency",
+      "environment": "prod",
+      "opened_at": "2026-07-30T16:56:00Z",
+      "channel": "#platform-oncall",
+      "operator": "s.okafor",
+      "pattern_key": "ledger_release_regression",
+      "pattern_occurrence": 1,
+      "alert": {
+        "title": "payments-ledger p99 latency spike after release",
+        "summary": "payments-ledger p99 2.9s with no CPU, memory, or queue saturation. Started within minutes of the v1.8.3 rollout.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-07-30T16:56:00Z",
+        "signals": {
+          "error_samples": [
+            "pg_stat_activity: 38 sessions waiting on lock: ledger_audit row",
+            "ledger_write_wait_ms p99 2400"
+          ]
+        }
+      },
+      "error_messages": [
+        "pg_stat_activity: 38 sessions waiting on lock: ledger_audit row",
+        "ledger_write_wait_ms p99 2400"
+      ],
+      "timeline": [
+        {
+          "at": "2026-07-30T16:56:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "payments-ledger alert fired"
+        },
+        {
+          "at": "2026-07-30T17:03:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-07-30T17:04:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-07-30T17:11:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Initial hypothesis: kafka consumer lag"
+        },
+        {
+          "at": "2026-07-30T18:03:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Manual mitigation applied for RC-004; runbook not yet promoted"
+        },
+        {
+          "at": "2026-07-30T18:07:00Z",
+          "actor": "operator",
+          "event": "inconclusive",
+          "detail": "Symptoms cleared without a confirmed cause"
+        },
+        {
+          "at": "2026-07-30T18:08:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like kafka consumer lag at first glance.",
+        "Cause not confirmed before symptoms cleared."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Initial hypothesis: kafka consumer lag",
+        "outcome": "inconclusive",
+        "actual_root_cause_id": null
+      },
+      "resolution": {
+        "fix": "Manual mitigation applied for RC-004; runbook not yet promoted",
+        "verified": false,
+        "time_to_resolve_minutes": 72,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1004",
+      "service": "redis-cache",
+      "severity": "p2",
+      "incident_type": "availability",
+      "environment": "prod",
+      "opened_at": "2026-07-31T02:29:00Z",
+      "channel": "#identity-oncall",
+      "operator": "m.iyer",
+      "pattern_key": "redis_failover_flap",
+      "pattern_occurrence": 1,
+      "alert": {
+        "title": "redis-cache failover flap",
+        "summary": "redis-cache sentinel reported 6 role changes in 10 minutes; hit rate 41%.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-07-31T02:29:00Z",
+        "signals": {
+          "error_samples": [
+            "redis_sentinel_role_changes_total 6",
+            "redis_connection_errors_total 12480",
+            "cache_hit_ratio 0.41"
+          ]
+        }
+      },
+      "error_messages": [
+        "redis_sentinel_role_changes_total 6",
+        "redis_connection_errors_total 12480",
+        "cache_hit_ratio 0.41"
+      ],
+      "timeline": [
+        {
+          "at": "2026-07-31T02:29:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "redis-cache alert fired"
+        },
+        {
+          "at": "2026-07-31T02:36:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-07-31T02:37:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-07-31T02:45:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Initial hypothesis: cache stampede after eviction"
+        },
+        {
+          "at": "2026-07-31T03:31:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Manual mitigation applied for RC-002; runbook not yet promoted"
+        },
+        {
+          "at": "2026-07-31T03:35:00Z",
+          "actor": "operator",
+          "event": "inconclusive",
+          "detail": "Symptoms cleared without a confirmed cause"
+        },
+        {
+          "at": "2026-07-31T03:43:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like cache stampede after eviction at first glance.",
+        "Cause not confirmed before symptoms cleared."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Initial hypothesis: cache stampede after eviction",
+        "outcome": "inconclusive",
+        "actual_root_cause_id": null
+      },
+      "resolution": {
+        "fix": "Manual mitigation applied for RC-002; runbook not yet promoted",
+        "verified": false,
+        "time_to_resolve_minutes": 74,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1005",
+      "service": "kafka-bus",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "environment": "prod",
+      "opened_at": "2026-07-31T21:51:00Z",
+      "channel": "#payments-oncall",
+      "operator": "j.lindqvist",
+      "pattern_key": "nightly_batch_kafka_lag",
+      "pattern_occurrence": 2,
+      "alert": {
+        "title": "Kafka consumer lag on payments topic",
+        "summary": "payments-ledger consumer group lag 96k and climbing, coinciding with the nightly settlement batch.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-07-31T21:51:00Z",
+        "signals": {
+          "error_samples": [
+            "kafka_consumer_lag{group=payments-ledger} 96412",
+            "WARN SettlementBatchJob: batch volume 3.4x hourly median"
+          ]
+        }
+      },
+      "error_messages": [
+        "kafka_consumer_lag{group=payments-ledger} 96412",
+        "WARN SettlementBatchJob: batch volume 3.4x hourly median"
+      ],
+      "timeline": [
+        {
+          "at": "2026-07-31T21:51:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "kafka-bus alert fired"
+        },
+        {
+          "at": "2026-07-31T21:52:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-07-31T21:53:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-07-31T22:04:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Initial hypothesis: checkout-api traffic spike"
+        },
+        {
+          "at": "2026-07-31T22:07:00Z",
+          "actor": "operator",
+          "event": "diagnosis_rejected",
+          "detail": "Proposal rejected; evidence did not match the observed saturation profile"
+        },
+        {
+          "at": "2026-07-31T22:53:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Manual mitigation applied for RC-001; runbook not yet promoted"
+        },
+        {
+          "at": "2026-07-31T22:58:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like broker disk saturation at first glance.",
+        "Cause not confirmed before symptoms cleared."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Initial hypothesis: checkout-api traffic spike",
+        "outcome": "rejected",
+        "actual_root_cause_id": "RC-001"
+      },
+      "resolution": {
+        "fix": "Manual mitigation applied for RC-001; runbook not yet promoted",
+        "verified": false,
+        "time_to_resolve_minutes": 67,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1006",
+      "service": "fraud-scorer",
+      "severity": "p2",
+      "incident_type": "latency",
+      "environment": "prod",
+      "opened_at": "2026-08-02T02:41:00Z",
+      "channel": "#payments-oncall",
+      "operator": "d.rao",
+      "pattern_key": "fraud_model_timeout",
+      "pattern_occurrence": 2,
+      "alert": {
+        "title": "fraud-scorer inference latency above budget",
+        "summary": "fraud-scorer p99 1.8s against a 250ms budget after a model promotion.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-02T02:41:00Z",
+        "signals": {
+          "error_samples": [
+            "model_inference_timeout_total 3120",
+            "WARN RuleEngineFallback: engaged for 22% of requests"
+          ]
+        }
+      },
+      "error_messages": [
+        "model_inference_timeout_total 3120",
+        "WARN RuleEngineFallback: engaged for 22% of requests"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-02T02:41:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "fraud-scorer alert fired"
+        },
+        {
+          "at": "2026-08-02T02:47:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-02T02:48:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-02T02:51:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Initial hypothesis: CPU throttling"
+        },
+        {
+          "at": "2026-08-02T02:54:00Z",
+          "actor": "operator",
+          "event": "diagnosis_rejected",
+          "detail": "Proposal rejected; evidence did not match the observed saturation profile"
+        },
+        {
+          "at": "2026-08-02T03:38:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Manual mitigation applied for RC-007; runbook not yet promoted"
+        },
+        {
+          "at": "2026-08-02T03:46:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like kafka consumer lag at first glance.",
+        "Cause not confirmed before symptoms cleared."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Initial hypothesis: CPU throttling",
+        "outcome": "rejected",
+        "actual_root_cause_id": "RC-007"
+      },
+      "resolution": {
+        "fix": "Manual mitigation applied for RC-007; runbook not yet promoted",
+        "verified": false,
+        "time_to_resolve_minutes": 65,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1007",
+      "service": "fraud-scorer",
+      "severity": "p3",
+      "incident_type": "error_rate",
+      "environment": "prod",
+      "opened_at": "2026-08-02T11:18:00Z",
+      "channel": "#identity-oncall",
+      "operator": "s.okafor",
+      "alert": {
+        "title": "fraud-scorer rule engine 4xx spike",
+        "summary": "fraud-scorer returned 4xx for 3.1% of requests for 6 minutes.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-02T11:18:00Z",
+        "signals": {
+          "error_samples": [
+            "fraud_rule_validation_4xx_total 4210"
+          ]
+        }
+      },
+      "error_messages": [
+        "fraud_rule_validation_4xx_total 4210"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-02T11:18:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "fraud-scorer alert fired"
+        },
+        {
+          "at": "2026-08-02T11:21:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-02T11:22:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-02T11:24:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Investigated upstream dependencies and traffic shape"
+        },
+        {
+          "at": "2026-08-02T11:48:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Merchant sent a malformed payload; schema validation tightened and no infra change was needed."
+        },
+        {
+          "at": "2026-08-02T11:52:00Z",
+          "actor": "operator",
+          "event": "inconclusive",
+          "detail": "Symptoms cleared without a confirmed cause"
+        },
+        {
+          "at": "2026-08-02T11:53:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Merchant sent a malformed payload; schema validation tightened and no infra change was needed."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Investigated upstream dependencies and traffic shape",
+        "outcome": "inconclusive",
+        "actual_root_cause_id": null
+      },
+      "resolution": {
+        "fix": "Merchant sent a malformed payload; schema validation tightened and no infra change was needed.",
+        "verified": false,
+        "time_to_resolve_minutes": 35,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1008",
+      "service": "fraud-scorer",
+      "severity": "p2",
+      "incident_type": "latency",
+      "environment": "prod",
+      "opened_at": "2026-08-03T11:27:00Z",
+      "channel": "#payments-oncall",
+      "operator": "m.iyer",
+      "pattern_key": "fraud_model_timeout",
+      "pattern_occurrence": 3,
+      "alert": {
+        "title": "fraud-scorer inference latency above budget",
+        "summary": "fraud-scorer p99 1.8s against a 250ms budget after a model promotion.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-03T11:27:00Z",
+        "signals": {
+          "error_samples": [
+            "model_inference_timeout_total 3120",
+            "WARN RuleEngineFallback: engaged for 22% of requests"
+          ]
+        }
+      },
+      "error_messages": [
+        "model_inference_timeout_total 3120",
+        "WARN RuleEngineFallback: engaged for 22% of requests"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-03T11:27:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "fraud-scorer alert fired"
+        },
+        {
+          "at": "2026-08-03T11:32:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-03T11:33:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-03T11:36:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-007 (fraud_scorer_model_timeout) based on matching prior incidents"
+        },
+        {
+          "at": "2026-08-03T12:31:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Restore the previous fraud model and warm the inference cache"
+        },
+        {
+          "at": "2026-08-03T12:35:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-08-03T12:40:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like kafka consumer lag at first glance.",
+        "Confirmed root cause: RC-007."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-007 (fraud_scorer_model_timeout) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-007"
+      },
+      "resolution": {
+        "fix": "Restore the previous fraud model and warm the inference cache",
+        "verified": true,
+        "time_to_resolve_minutes": 73,
+        "validated_runbook_id": "RB-018"
+      }
+    },
+    {
+      "incident_id": "INC-1009",
+      "service": "webhook-dispatcher",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "environment": "prod",
+      "opened_at": "2026-08-04T01:33:00Z",
+      "channel": "#identity-oncall",
+      "operator": "j.lindqvist",
+      "pattern_key": "webhook_retry_storm",
+      "pattern_occurrence": 1,
+      "alert": {
+        "title": "webhook-dispatcher retry queue growth",
+        "summary": "webhook retry queue 240k and growing; ledger latency degrading.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-04T01:33:00Z",
+        "signals": {
+          "error_samples": [
+            "webhook_retry_queue_depth 241887",
+            "webhook_retry_immediate_total 1.9e6"
+          ]
+        }
+      },
+      "error_messages": [
+        "webhook_retry_queue_depth 241887",
+        "webhook_retry_immediate_total 1.9e6"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-04T01:33:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "webhook-dispatcher alert fired"
+        },
+        {
+          "at": "2026-08-04T01:35:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-04T01:36:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-04T01:39:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Initial hypothesis: merchant endpoint outage"
+        },
+        {
+          "at": "2026-08-04T02:29:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Manual mitigation applied for RC-006; runbook not yet promoted"
+        },
+        {
+          "at": "2026-08-04T02:33:00Z",
+          "actor": "operator",
+          "event": "inconclusive",
+          "detail": "Symptoms cleared without a confirmed cause"
+        },
+        {
+          "at": "2026-08-04T02:41:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like merchant endpoint outage at first glance.",
+        "Cause not confirmed before symptoms cleared."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Initial hypothesis: merchant endpoint outage",
+        "outcome": "inconclusive",
+        "actual_root_cause_id": null
+      },
+      "resolution": {
+        "fix": "Manual mitigation applied for RC-006; runbook not yet promoted",
+        "verified": false,
+        "time_to_resolve_minutes": 68,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1010",
+      "service": "checkout-api",
+      "severity": "p1",
+      "incident_type": "latency",
+      "environment": "prod",
+      "opened_at": "2026-08-05T09:57:00Z",
+      "channel": "#identity-oncall",
+      "operator": "j.lindqvist",
+      "pattern_key": "ledger_deploy_checkout_latency",
+      "pattern_occurrence": 1,
+      "alert": {
+        "title": "checkout-api p99 latency above SLO",
+        "summary": "checkout-api p99 latency 4.2s (SLO 800ms). Elevated ledger confirmation timeouts starting shortly after the payments-ledger deploy.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-05T09:57:00Z",
+        "signals": {
+          "error_samples": [
+            "checkout.ledger.confirm timeout after 3000ms (svc=payments-ledger)",
+            "WARN LedgerConfirmationClient: 412 in-flight confirmations exceeded budget",
+            "payments_ledger_consumer_lag_seconds 1840"
+          ]
+        }
+      },
+      "error_messages": [
+        "checkout.ledger.confirm timeout after 3000ms (svc=payments-ledger)",
+        "WARN LedgerConfirmationClient: 412 in-flight confirmations exceeded budget",
+        "payments_ledger_consumer_lag_seconds 1840"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-05T09:57:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "checkout-api alert fired"
+        },
+        {
+          "at": "2026-08-05T10:01:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-05T10:02:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-05T10:13:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Initial hypothesis: checkout-api database connection pool exhaustion"
+        },
+        {
+          "at": "2026-08-05T11:06:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Manual mitigation applied for RC-001; runbook not yet promoted"
+        },
+        {
+          "at": "2026-08-05T11:10:00Z",
+          "actor": "operator",
+          "event": "inconclusive",
+          "detail": "Symptoms cleared without a confirmed cause"
+        },
+        {
+          "at": "2026-08-05T11:16:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like checkout-api database connection pool exhaustion at first glance.",
+        "Cause not confirmed before symptoms cleared."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Initial hypothesis: checkout-api database connection pool exhaustion",
+        "outcome": "inconclusive",
+        "actual_root_cause_id": null
+      },
+      "resolution": {
+        "fix": "Manual mitigation applied for RC-001; runbook not yet promoted",
+        "verified": false,
+        "time_to_resolve_minutes": 79,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1011",
+      "service": "checkout-api",
+      "severity": "p1",
+      "incident_type": "latency",
+      "environment": "prod",
+      "opened_at": "2026-08-06T04:16:00Z",
+      "channel": "#payments-oncall",
+      "operator": "m.iyer",
+      "pattern_key": "ledger_deploy_checkout_latency",
+      "pattern_occurrence": 2,
+      "alert": {
+        "title": "checkout-api p99 latency above SLO",
+        "summary": "checkout-api p99 latency 4.2s (SLO 800ms). Elevated ledger confirmation timeouts starting shortly after the payments-ledger deploy.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-06T04:16:00Z",
+        "signals": {
+          "error_samples": [
+            "checkout.ledger.confirm timeout after 3000ms (svc=payments-ledger)",
+            "WARN LedgerConfirmationClient: 412 in-flight confirmations exceeded budget",
+            "payments_ledger_consumer_lag_seconds 1840"
+          ]
+        }
+      },
+      "error_messages": [
+        "checkout.ledger.confirm timeout after 3000ms (svc=payments-ledger)",
+        "WARN LedgerConfirmationClient: 412 in-flight confirmations exceeded budget",
+        "payments_ledger_consumer_lag_seconds 1840"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-06T04:16:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "checkout-api alert fired"
+        },
+        {
+          "at": "2026-08-06T04:17:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-06T04:18:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-06T04:23:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Initial hypothesis: redis-cache failover churn"
+        },
+        {
+          "at": "2026-08-06T04:26:00Z",
+          "actor": "operator",
+          "event": "diagnosis_rejected",
+          "detail": "Proposal rejected; evidence did not match the observed saturation profile"
+        },
+        {
+          "at": "2026-08-06T04:52:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Manual mitigation applied for RC-001; runbook not yet promoted"
+        },
+        {
+          "at": "2026-08-06T04:58:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like checkout-api database connection pool exhaustion at first glance.",
+        "Cause not confirmed before symptoms cleared."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Initial hypothesis: redis-cache failover churn",
+        "outcome": "rejected",
+        "actual_root_cause_id": "RC-001"
+      },
+      "resolution": {
+        "fix": "Manual mitigation applied for RC-001; runbook not yet promoted",
+        "verified": false,
+        "time_to_resolve_minutes": 42,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1012",
+      "service": "redis-cache",
+      "severity": "p2",
+      "incident_type": "availability",
+      "environment": "prod",
+      "opened_at": "2026-08-07T11:34:00Z",
+      "channel": "#identity-oncall",
+      "operator": "d.rao",
+      "pattern_key": "redis_failover_flap",
+      "pattern_occurrence": 2,
+      "alert": {
+        "title": "redis-cache failover flap",
+        "summary": "redis-cache sentinel reported 6 role changes in 10 minutes; hit rate 41%.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-07T11:34:00Z",
+        "signals": {
+          "error_samples": [
+            "redis_sentinel_role_changes_total 6",
+            "redis_connection_errors_total 12480",
+            "cache_hit_ratio 0.41"
+          ]
+        }
+      },
+      "error_messages": [
+        "redis_sentinel_role_changes_total 6",
+        "redis_connection_errors_total 12480",
+        "cache_hit_ratio 0.41"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-07T11:34:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "redis-cache alert fired"
+        },
+        {
+          "at": "2026-08-07T11:39:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-07T11:40:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-07T11:45:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Initial hypothesis: network partition"
+        },
+        {
+          "at": "2026-08-07T11:48:00Z",
+          "actor": "operator",
+          "event": "diagnosis_rejected",
+          "detail": "Proposal rejected; evidence did not match the observed saturation profile"
+        },
+        {
+          "at": "2026-08-07T12:17:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Manual mitigation applied for RC-002; runbook not yet promoted"
+        },
+        {
+          "at": "2026-08-07T12:27:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like cache stampede after eviction at first glance.",
+        "Cause not confirmed before symptoms cleared."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Initial hypothesis: network partition",
+        "outcome": "rejected",
+        "actual_root_cause_id": "RC-002"
+      },
+      "resolution": {
+        "fix": "Manual mitigation applied for RC-002; runbook not yet promoted",
+        "verified": false,
+        "time_to_resolve_minutes": 53,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1013",
+      "service": "redis-cache",
+      "severity": "p2",
+      "incident_type": "availability",
+      "environment": "prod",
+      "opened_at": "2026-08-07T16:27:00Z",
+      "channel": "#payments-oncall",
+      "operator": "m.iyer",
+      "pattern_key": "redis_failover_flap",
+      "pattern_occurrence": 3,
+      "alert": {
+        "title": "redis-cache failover flap",
+        "summary": "redis-cache sentinel reported 6 role changes in 10 minutes; hit rate 41%.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-07T16:27:00Z",
+        "signals": {
+          "error_samples": [
+            "redis_sentinel_role_changes_total 6",
+            "redis_connection_errors_total 12480",
+            "cache_hit_ratio 0.41"
+          ]
+        }
+      },
+      "error_messages": [
+        "redis_sentinel_role_changes_total 6",
+        "redis_connection_errors_total 12480",
+        "cache_hit_ratio 0.41"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-07T16:27:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "redis-cache alert fired"
+        },
+        {
+          "at": "2026-08-07T16:28:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-07T16:29:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-07T16:39:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-002 (redis_failover_flap) based on matching prior incidents"
+        },
+        {
+          "at": "2026-08-07T17:05:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Pin the Redis primary and widen the sentinel failover window"
+        },
+        {
+          "at": "2026-08-07T17:09:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-08-07T17:16:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like cache stampede after eviction at first glance.",
+        "Confirmed root cause: RC-002."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-002 (redis_failover_flap) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-002"
+      },
+      "resolution": {
+        "fix": "Pin the Redis primary and widen the sentinel failover window",
+        "verified": true,
+        "time_to_resolve_minutes": 49,
+        "validated_runbook_id": "RB-021"
+      }
+    },
+    {
+      "incident_id": "INC-1014",
+      "service": "checkout-api",
+      "severity": "p3",
+      "incident_type": "latency",
+      "environment": "prod",
+      "opened_at": "2026-08-08T08:22:00Z",
+      "channel": "#identity-oncall",
+      "operator": "j.lindqvist",
+      "alert": {
+        "title": "checkout-api p95 elevated on one region",
+        "summary": "checkout-api p95 1.1s in eu-west-1 only, lasted 9 minutes.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-08T08:22:00Z",
+        "signals": {
+          "error_samples": [
+            "checkout_p95_ms{region=eu-west-1} 1120"
+          ]
+        }
+      },
+      "error_messages": [
+        "checkout_p95_ms{region=eu-west-1} 1120"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-08T08:22:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "checkout-api alert fired"
+        },
+        {
+          "at": "2026-08-08T08:24:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-08T08:25:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-08T08:31:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Investigated upstream dependencies and traffic shape"
+        },
+        {
+          "at": "2026-08-08T08:37:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Regional network path degradation upstream of our infrastructure; self-resolved."
+        },
+        {
+          "at": "2026-08-08T08:41:00Z",
+          "actor": "operator",
+          "event": "inconclusive",
+          "detail": "Symptoms cleared without a confirmed cause"
+        },
+        {
+          "at": "2026-08-08T08:42:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Regional network path degradation upstream of our infrastructure; self-resolved."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Investigated upstream dependencies and traffic shape",
+        "outcome": "inconclusive",
+        "actual_root_cause_id": null
+      },
+      "resolution": {
+        "fix": "Regional network path degradation upstream of our infrastructure; self-resolved.",
+        "verified": false,
+        "time_to_resolve_minutes": 20,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1015",
+      "service": "payments-ledger",
+      "severity": "p1",
+      "incident_type": "latency",
+      "environment": "prod",
+      "opened_at": "2026-08-08T19:30:00Z",
+      "channel": "#payments-oncall",
+      "operator": "j.lindqvist",
+      "pattern_key": "ledger_release_regression",
+      "pattern_occurrence": 2,
+      "alert": {
+        "title": "payments-ledger p99 latency spike after release",
+        "summary": "payments-ledger p99 2.9s with no CPU, memory, or queue saturation. Started within minutes of the v1.8.3 rollout.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-08T19:30:00Z",
+        "signals": {
+          "error_samples": [
+            "pg_stat_activity: 38 sessions waiting on lock: ledger_audit row",
+            "ledger_write_wait_ms p99 2400"
+          ]
+        }
+      },
+      "error_messages": [
+        "pg_stat_activity: 38 sessions waiting on lock: ledger_audit row",
+        "ledger_write_wait_ms p99 2400"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-08T19:30:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "payments-ledger alert fired"
+        },
+        {
+          "at": "2026-08-08T19:34:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-08T19:35:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-08T19:46:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Initial hypothesis: database failover"
+        },
+        {
+          "at": "2026-08-08T19:49:00Z",
+          "actor": "operator",
+          "event": "diagnosis_rejected",
+          "detail": "Proposal rejected; evidence did not match the observed saturation profile"
+        },
+        {
+          "at": "2026-08-08T20:10:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Manual mitigation applied for RC-004; runbook not yet promoted"
+        },
+        {
+          "at": "2026-08-08T20:17:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like kafka consumer lag at first glance.",
+        "Cause not confirmed before symptoms cleared."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Initial hypothesis: database failover",
+        "outcome": "rejected",
+        "actual_root_cause_id": "RC-004"
+      },
+      "resolution": {
+        "fix": "Manual mitigation applied for RC-004; runbook not yet promoted",
+        "verified": false,
+        "time_to_resolve_minutes": 47,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1016",
+      "service": "fraud-scorer",
+      "severity": "p2",
+      "incident_type": "latency",
+      "environment": "prod",
+      "opened_at": "2026-08-09T19:25:00Z",
+      "channel": "#identity-oncall",
+      "operator": "m.iyer",
+      "pattern_key": "fraud_model_timeout",
+      "pattern_occurrence": 4,
+      "alert": {
+        "title": "fraud-scorer inference latency above budget",
+        "summary": "fraud-scorer p99 1.8s against a 250ms budget after a model promotion.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-09T19:25:00Z",
+        "signals": {
+          "error_samples": [
+            "model_inference_timeout_total 3120",
+            "WARN RuleEngineFallback: engaged for 22% of requests"
+          ]
+        }
+      },
+      "error_messages": [
+        "model_inference_timeout_total 3120",
+        "WARN RuleEngineFallback: engaged for 22% of requests"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-09T19:25:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "fraud-scorer alert fired"
+        },
+        {
+          "at": "2026-08-09T19:32:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-09T19:33:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-09T19:42:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-007 (fraud_scorer_model_timeout) based on matching prior incidents"
+        },
+        {
+          "at": "2026-08-09T19:55:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Restore the previous fraud model and warm the inference cache"
+        },
+        {
+          "at": "2026-08-09T19:59:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-08-09T20:07:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like kafka consumer lag at first glance.",
+        "Confirmed root cause: RC-007."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-007 (fraud_scorer_model_timeout) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-007"
+      },
+      "resolution": {
+        "fix": "Restore the previous fraud model and warm the inference cache",
+        "verified": true,
+        "time_to_resolve_minutes": 42,
+        "validated_runbook_id": "RB-018"
+      }
+    },
+    {
+      "incident_id": "INC-1017",
+      "service": "checkout-api",
+      "severity": "p1",
+      "incident_type": "latency",
+      "environment": "prod",
+      "opened_at": "2026-08-10T18:02:00Z",
+      "channel": "#platform-oncall",
+      "operator": "j.lindqvist",
+      "pattern_key": "ledger_deploy_checkout_latency",
+      "pattern_occurrence": 3,
+      "alert": {
+        "title": "checkout-api p99 latency above SLO",
+        "summary": "checkout-api p99 latency 4.2s (SLO 800ms). Elevated ledger confirmation timeouts starting shortly after the payments-ledger deploy.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-10T18:02:00Z",
+        "signals": {
+          "error_samples": [
+            "checkout.ledger.confirm timeout after 3000ms (svc=payments-ledger)",
+            "WARN LedgerConfirmationClient: 412 in-flight confirmations exceeded budget",
+            "payments_ledger_consumer_lag_seconds 1840"
+          ]
+        }
+      },
+      "error_messages": [
+        "checkout.ledger.confirm timeout after 3000ms (svc=payments-ledger)",
+        "WARN LedgerConfirmationClient: 412 in-flight confirmations exceeded budget",
+        "payments_ledger_consumer_lag_seconds 1840"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-10T18:02:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "checkout-api alert fired"
+        },
+        {
+          "at": "2026-08-10T18:07:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-10T18:08:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-10T18:14:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-001 (kafka_consumer_lag) based on matching prior incidents"
+        },
+        {
+          "at": "2026-08-10T18:59:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Scale the payments-ledger consumer group and replay the affected partition"
+        },
+        {
+          "at": "2026-08-10T19:03:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-08-10T19:10:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like checkout-api database connection pool exhaustion at first glance.",
+        "Confirmed root cause: RC-001."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-001 (kafka_consumer_lag) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-001"
+      },
+      "resolution": {
+        "fix": "Scale the payments-ledger consumer group and replay the affected partition",
+        "verified": true,
+        "time_to_resolve_minutes": 68,
+        "validated_runbook_id": "RB-014"
+      }
+    },
+    {
+      "incident_id": "INC-1018",
+      "service": "payments-ledger",
+      "severity": "p1",
+      "incident_type": "latency",
+      "environment": "prod",
+      "opened_at": "2026-08-11T17:49:00Z",
+      "channel": "#identity-oncall",
+      "operator": "k.novak",
+      "pattern_key": "ledger_release_regression",
+      "pattern_occurrence": 3,
+      "alert": {
+        "title": "payments-ledger p99 latency spike after release",
+        "summary": "payments-ledger p99 2.9s with no CPU, memory, or queue saturation. Started within minutes of the v1.8.3 rollout.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-11T17:49:00Z",
+        "signals": {
+          "error_samples": [
+            "pg_stat_activity: 38 sessions waiting on lock: ledger_audit row",
+            "ledger_write_wait_ms p99 2400"
+          ]
+        }
+      },
+      "error_messages": [
+        "pg_stat_activity: 38 sessions waiting on lock: ledger_audit row",
+        "ledger_write_wait_ms p99 2400"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-11T17:49:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "payments-ledger alert fired"
+        },
+        {
+          "at": "2026-08-11T17:51:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-11T17:52:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-11T17:59:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-004 (deploy_regression_latency) based on matching prior incidents"
+        },
+        {
+          "at": "2026-08-11T18:31:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Roll payments-ledger back to v1.8.2 and move the ledger write off the request path"
+        },
+        {
+          "at": "2026-08-11T18:35:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-08-11T18:42:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like kafka consumer lag at first glance.",
+        "Confirmed root cause: RC-004."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-004 (deploy_regression_latency) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-004"
+      },
+      "resolution": {
+        "fix": "Roll payments-ledger back to v1.8.2 and move the ledger write off the request path",
+        "verified": true,
+        "time_to_resolve_minutes": 53,
+        "validated_runbook_id": "RB-032"
+      }
+    },
+    {
+      "incident_id": "INC-1019",
+      "service": "fraud-scorer",
+      "severity": "p2",
+      "incident_type": "latency",
+      "environment": "prod",
+      "opened_at": "2026-08-12T20:09:00Z",
+      "channel": "#platform-oncall",
+      "operator": "k.novak",
+      "pattern_key": "fraud_model_timeout",
+      "pattern_occurrence": 5,
+      "alert": {
+        "title": "fraud-scorer inference latency above budget",
+        "summary": "fraud-scorer p99 1.8s against a 250ms budget after a model promotion.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-12T20:09:00Z",
+        "signals": {
+          "error_samples": [
+            "model_inference_timeout_total 3120",
+            "WARN RuleEngineFallback: engaged for 22% of requests"
+          ]
+        }
+      },
+      "error_messages": [
+        "model_inference_timeout_total 3120",
+        "WARN RuleEngineFallback: engaged for 22% of requests"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-12T20:09:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "fraud-scorer alert fired"
+        },
+        {
+          "at": "2026-08-12T20:16:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-12T20:17:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-12T20:23:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-007 (fraud_scorer_model_timeout) based on matching prior incidents"
+        },
+        {
+          "at": "2026-08-12T20:56:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Restore the previous fraud model and warm the inference cache"
+        },
+        {
+          "at": "2026-08-12T21:00:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-08-12T21:02:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like kafka consumer lag at first glance.",
+        "Confirmed root cause: RC-007."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-007 (fraud_scorer_model_timeout) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-007"
+      },
+      "resolution": {
+        "fix": "Restore the previous fraud model and warm the inference cache",
+        "verified": true,
+        "time_to_resolve_minutes": 53,
+        "validated_runbook_id": "RB-018"
+      }
+    },
+    {
+      "incident_id": "INC-1020",
+      "service": "checkout-api",
+      "severity": "p1",
+      "incident_type": "latency",
+      "environment": "prod",
+      "opened_at": "2026-08-12T23:21:00Z",
+      "channel": "#payments-oncall",
+      "operator": "k.novak",
+      "pattern_key": "ledger_deploy_checkout_latency",
+      "pattern_occurrence": 4,
+      "alert": {
+        "title": "checkout-api p99 latency above SLO",
+        "summary": "checkout-api p99 latency 4.2s (SLO 800ms). Elevated ledger confirmation timeouts starting shortly after the payments-ledger deploy.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-12T23:21:00Z",
+        "signals": {
+          "error_samples": [
+            "checkout.ledger.confirm timeout after 3000ms (svc=payments-ledger)",
+            "WARN LedgerConfirmationClient: 412 in-flight confirmations exceeded budget",
+            "payments_ledger_consumer_lag_seconds 1840"
+          ]
+        }
+      },
+      "error_messages": [
+        "checkout.ledger.confirm timeout after 3000ms (svc=payments-ledger)",
+        "WARN LedgerConfirmationClient: 412 in-flight confirmations exceeded budget",
+        "payments_ledger_consumer_lag_seconds 1840"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-12T23:21:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "checkout-api alert fired"
+        },
+        {
+          "at": "2026-08-12T23:25:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-12T23:26:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-12T23:37:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-001 (kafka_consumer_lag) based on matching prior incidents"
+        },
+        {
+          "at": "2026-08-13T00:33:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Scale the payments-ledger consumer group and replay the affected partition"
+        },
+        {
+          "at": "2026-08-13T00:37:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-08-13T00:44:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like checkout-api database connection pool exhaustion at first glance.",
+        "Confirmed root cause: RC-001."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-001 (kafka_consumer_lag) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-001"
+      },
+      "resolution": {
+        "fix": "Scale the payments-ledger consumer group and replay the affected partition",
+        "verified": true,
+        "time_to_resolve_minutes": 83,
+        "validated_runbook_id": "RB-014"
+      }
+    },
+    {
+      "incident_id": "INC-1021",
+      "service": "checkout-api",
+      "severity": "p3",
+      "incident_type": "latency",
+      "environment": "prod",
+      "opened_at": "2026-08-13T04:54:00Z",
+      "channel": "#payments-oncall",
+      "operator": "j.lindqvist",
+      "alert": {
+        "title": "checkout-api p95 elevated on one region",
+        "summary": "checkout-api p95 1.1s in eu-west-1 only, lasted 9 minutes.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-13T04:54:00Z",
+        "signals": {
+          "error_samples": [
+            "checkout_p95_ms{region=eu-west-1} 1120"
+          ]
+        }
+      },
+      "error_messages": [
+        "checkout_p95_ms{region=eu-west-1} 1120"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-13T04:54:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "checkout-api alert fired"
+        },
+        {
+          "at": "2026-08-13T05:00:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-13T05:01:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-13T05:07:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Investigated upstream dependencies and traffic shape"
+        },
+        {
+          "at": "2026-08-13T05:13:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Regional network path degradation upstream of our infrastructure; self-resolved."
+        },
+        {
+          "at": "2026-08-13T05:17:00Z",
+          "actor": "operator",
+          "event": "inconclusive",
+          "detail": "Symptoms cleared without a confirmed cause"
+        },
+        {
+          "at": "2026-08-13T05:18:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Regional network path degradation upstream of our infrastructure; self-resolved."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Investigated upstream dependencies and traffic shape",
+        "outcome": "inconclusive",
+        "actual_root_cause_id": null
+      },
+      "resolution": {
+        "fix": "Regional network path degradation upstream of our infrastructure; self-resolved.",
+        "verified": false,
+        "time_to_resolve_minutes": 24,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1022",
+      "service": "redis-cache",
+      "severity": "p2",
+      "incident_type": "availability",
+      "environment": "prod",
+      "opened_at": "2026-08-13T14:42:00Z",
+      "channel": "#platform-oncall",
+      "operator": "k.novak",
+      "pattern_key": "redis_failover_flap",
+      "pattern_occurrence": 4,
+      "alert": {
+        "title": "redis-cache failover flap",
+        "summary": "redis-cache sentinel reported 6 role changes in 10 minutes; hit rate 41%.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-13T14:42:00Z",
+        "signals": {
+          "error_samples": [
+            "redis_sentinel_role_changes_total 6",
+            "redis_connection_errors_total 12480",
+            "cache_hit_ratio 0.41"
+          ]
+        }
+      },
+      "error_messages": [
+        "redis_sentinel_role_changes_total 6",
+        "redis_connection_errors_total 12480",
+        "cache_hit_ratio 0.41"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-13T14:42:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "redis-cache alert fired"
+        },
+        {
+          "at": "2026-08-13T14:43:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-13T14:44:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-13T14:54:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-002 (redis_failover_flap) based on matching prior incidents"
+        },
+        {
+          "at": "2026-08-13T15:51:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Pin the Redis primary and widen the sentinel failover window"
+        },
+        {
+          "at": "2026-08-13T15:55:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-08-13T15:59:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like cache stampede after eviction at first glance.",
+        "Confirmed root cause: RC-002."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-002 (redis_failover_flap) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-002"
+      },
+      "resolution": {
+        "fix": "Pin the Redis primary and widen the sentinel failover window",
+        "verified": true,
+        "time_to_resolve_minutes": 77,
+        "validated_runbook_id": "RB-021"
+      }
+    },
+    {
+      "incident_id": "INC-1023",
+      "service": "redis-cache",
+      "severity": "p2",
+      "incident_type": "availability",
+      "environment": "prod",
+      "opened_at": "2026-08-14T14:59:00Z",
+      "channel": "#identity-oncall",
+      "operator": "j.lindqvist",
+      "pattern_key": "redis_failover_flap",
+      "pattern_occurrence": 5,
+      "alert": {
+        "title": "redis-cache failover flap",
+        "summary": "redis-cache sentinel reported 6 role changes in 10 minutes; hit rate 41%.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-14T14:59:00Z",
+        "signals": {
+          "error_samples": [
+            "redis_sentinel_role_changes_total 6",
+            "redis_connection_errors_total 12480",
+            "cache_hit_ratio 0.41"
+          ]
+        }
+      },
+      "error_messages": [
+        "redis_sentinel_role_changes_total 6",
+        "redis_connection_errors_total 12480",
+        "cache_hit_ratio 0.41"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-14T14:59:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "redis-cache alert fired"
+        },
+        {
+          "at": "2026-08-14T15:00:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-14T15:01:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-14T15:06:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-002 (redis_failover_flap) based on matching prior incidents"
+        },
+        {
+          "at": "2026-08-14T15:48:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Pin the Redis primary and widen the sentinel failover window"
+        },
+        {
+          "at": "2026-08-14T15:52:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-08-14T15:53:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like cache stampede after eviction at first glance.",
+        "Confirmed root cause: RC-002."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-002 (redis_failover_flap) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-002"
+      },
+      "resolution": {
+        "fix": "Pin the Redis primary and widen the sentinel failover window",
+        "verified": true,
+        "time_to_resolve_minutes": 54,
+        "validated_runbook_id": "RB-021"
+      }
+    },
+    {
+      "incident_id": "INC-1024",
+      "service": "checkout-api",
+      "severity": "p1",
+      "incident_type": "latency",
+      "environment": "prod",
+      "opened_at": "2026-08-16T00:18:00Z",
+      "channel": "#platform-oncall",
+      "operator": "m.iyer",
+      "pattern_key": "ledger_deploy_checkout_latency",
+      "pattern_occurrence": 5,
+      "alert": {
+        "title": "checkout-api p99 latency above SLO",
+        "summary": "checkout-api p99 latency 4.2s (SLO 800ms). Elevated ledger confirmation timeouts starting shortly after the payments-ledger deploy.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-16T00:18:00Z",
+        "signals": {
+          "error_samples": [
+            "checkout.ledger.confirm timeout after 3000ms (svc=payments-ledger)",
+            "WARN LedgerConfirmationClient: 412 in-flight confirmations exceeded budget",
+            "payments_ledger_consumer_lag_seconds 1840"
+          ]
+        }
+      },
+      "error_messages": [
+        "checkout.ledger.confirm timeout after 3000ms (svc=payments-ledger)",
+        "WARN LedgerConfirmationClient: 412 in-flight confirmations exceeded budget",
+        "payments_ledger_consumer_lag_seconds 1840"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-16T00:18:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "checkout-api alert fired"
+        },
+        {
+          "at": "2026-08-16T00:20:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-16T00:21:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-16T00:31:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-001 (kafka_consumer_lag) based on matching prior incidents"
+        },
+        {
+          "at": "2026-08-16T00:39:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Scale the payments-ledger consumer group and replay the affected partition"
+        },
+        {
+          "at": "2026-08-16T00:43:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-08-16T00:51:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like checkout-api database connection pool exhaustion at first glance.",
+        "Confirmed root cause: RC-001."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-001 (kafka_consumer_lag) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-001"
+      },
+      "resolution": {
+        "fix": "Scale the payments-ledger consumer group and replay the affected partition",
+        "verified": true,
+        "time_to_resolve_minutes": 33,
+        "validated_runbook_id": "RB-014"
+      }
+    },
+    {
+      "incident_id": "INC-1025",
+      "service": "kafka-bus",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "environment": "prod",
+      "opened_at": "2026-08-16T04:11:00Z",
+      "channel": "#identity-oncall",
+      "operator": "m.iyer",
+      "pattern_key": "nightly_batch_kafka_lag",
+      "pattern_occurrence": 3,
+      "alert": {
+        "title": "Kafka consumer lag on payments topic",
+        "summary": "payments-ledger consumer group lag 96k and climbing, coinciding with the nightly settlement batch.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-16T04:11:00Z",
+        "signals": {
+          "error_samples": [
+            "kafka_consumer_lag{group=payments-ledger} 96412",
+            "WARN SettlementBatchJob: batch volume 3.4x hourly median"
+          ]
+        }
+      },
+      "error_messages": [
+        "kafka_consumer_lag{group=payments-ledger} 96412",
+        "WARN SettlementBatchJob: batch volume 3.4x hourly median"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-16T04:11:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "kafka-bus alert fired"
+        },
+        {
+          "at": "2026-08-16T04:13:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-16T04:14:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-16T04:20:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-001 (kafka_consumer_lag) based on matching prior incidents"
+        },
+        {
+          "at": "2026-08-16T05:11:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Scale the payments-ledger consumer group and replay the affected partition"
+        },
+        {
+          "at": "2026-08-16T05:15:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-08-16T05:16:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like broker disk saturation at first glance.",
+        "Confirmed root cause: RC-001."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-001 (kafka_consumer_lag) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-001"
+      },
+      "resolution": {
+        "fix": "Scale the payments-ledger consumer group and replay the affected partition",
+        "verified": true,
+        "time_to_resolve_minutes": 65,
+        "validated_runbook_id": "RB-014"
+      }
+    },
+    {
+      "incident_id": "INC-1026",
+      "service": "auth-service",
+      "severity": "p3",
+      "incident_type": "latency",
+      "environment": "prod",
+      "opened_at": "2026-08-17T11:29:00Z",
+      "channel": "#payments-oncall",
+      "operator": "s.okafor",
+      "pattern_key": "auth_redis_dependency",
+      "pattern_occurrence": 1,
+      "alert": {
+        "title": "auth-service token validation latency elevated",
+        "summary": "auth-service token validation p99 900ms; redis-cache dependency slow.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-17T11:29:00Z",
+        "signals": {
+          "error_samples": [
+            "auth_redis_latency_ms p99 880",
+            "cache_hit_ratio 0.52"
+          ]
+        }
+      },
+      "error_messages": [
+        "auth_redis_latency_ms p99 880",
+        "cache_hit_ratio 0.52"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-17T11:29:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "auth-service alert fired"
+        },
+        {
+          "at": "2026-08-17T11:35:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-17T11:36:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-17T11:43:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Initial hypothesis: identity provider slowdown"
+        },
+        {
+          "at": "2026-08-17T12:36:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Manual mitigation applied for RC-002; runbook not yet promoted"
+        },
+        {
+          "at": "2026-08-17T12:40:00Z",
+          "actor": "operator",
+          "event": "inconclusive",
+          "detail": "Symptoms cleared without a confirmed cause"
+        },
+        {
+          "at": "2026-08-17T12:46:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like identity provider slowdown at first glance.",
+        "Cause not confirmed before symptoms cleared."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Initial hypothesis: identity provider slowdown",
+        "outcome": "inconclusive",
+        "actual_root_cause_id": null
+      },
+      "resolution": {
+        "fix": "Manual mitigation applied for RC-002; runbook not yet promoted",
+        "verified": false,
+        "time_to_resolve_minutes": 77,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1027",
+      "service": "redis-cache",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "environment": "prod",
+      "opened_at": "2026-08-18T17:22:00Z",
+      "channel": "#platform-oncall",
+      "operator": "d.rao",
+      "pattern_key": "cache_stampede",
+      "pattern_occurrence": 1,
+      "alert": {
+        "title": "redis-cache eviction storm",
+        "summary": "redis-cache evicted 1.2M keys in 4 minutes; payments-ledger query rate 9x.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-18T17:22:00Z",
+        "signals": {
+          "error_samples": [
+            "redis_evicted_keys_total 1214000",
+            "ledger_query_rate 9.1x baseline"
+          ]
+        }
+      },
+      "error_messages": [
+        "redis_evicted_keys_total 1214000",
+        "ledger_query_rate 9.1x baseline"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-18T17:22:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "redis-cache alert fired"
+        },
+        {
+          "at": "2026-08-18T17:29:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-18T17:30:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-18T17:35:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Initial hypothesis: redis failover flap"
+        },
+        {
+          "at": "2026-08-18T17:50:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Manual mitigation applied for RC-008; runbook not yet promoted"
+        },
+        {
+          "at": "2026-08-18T17:54:00Z",
+          "actor": "operator",
+          "event": "inconclusive",
+          "detail": "Symptoms cleared without a confirmed cause"
+        },
+        {
+          "at": "2026-08-18T17:55:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like redis failover flap at first glance.",
+        "Cause not confirmed before symptoms cleared."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Initial hypothesis: redis failover flap",
+        "outcome": "inconclusive",
+        "actual_root_cause_id": null
+      },
+      "resolution": {
+        "fix": "Manual mitigation applied for RC-008; runbook not yet promoted",
+        "verified": false,
+        "time_to_resolve_minutes": 33,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1028",
+      "service": "checkout-api",
+      "severity": "p3",
+      "incident_type": "latency",
+      "environment": "prod",
+      "opened_at": "2026-08-19T08:10:00Z",
+      "channel": "#payments-oncall",
+      "operator": "m.iyer",
+      "alert": {
+        "title": "checkout-api p95 elevated on one region",
+        "summary": "checkout-api p95 1.1s in eu-west-1 only, lasted 9 minutes.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-19T08:10:00Z",
+        "signals": {
+          "error_samples": [
+            "checkout_p95_ms{region=eu-west-1} 1120"
+          ]
+        }
+      },
+      "error_messages": [
+        "checkout_p95_ms{region=eu-west-1} 1120"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-19T08:10:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "checkout-api alert fired"
+        },
+        {
+          "at": "2026-08-19T08:12:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-19T08:13:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-19T08:20:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Regional network path degradation upstream of our infrastructure; self-resolved."
+        },
+        {
+          "at": "2026-08-19T08:24:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Investigated upstream dependencies and traffic shape"
+        },
+        {
+          "at": "2026-08-19T08:24:00Z",
+          "actor": "operator",
+          "event": "inconclusive",
+          "detail": "Symptoms cleared without a confirmed cause"
+        },
+        {
+          "at": "2026-08-19T08:25:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Regional network path degradation upstream of our infrastructure; self-resolved."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Investigated upstream dependencies and traffic shape",
+        "outcome": "inconclusive",
+        "actual_root_cause_id": null
+      },
+      "resolution": {
+        "fix": "Regional network path degradation upstream of our infrastructure; self-resolved.",
+        "verified": false,
+        "time_to_resolve_minutes": 15,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1029",
+      "service": "fraud-scorer",
+      "severity": "p2",
+      "incident_type": "latency",
+      "environment": "prod",
+      "opened_at": "2026-08-20T12:36:00Z",
+      "channel": "#platform-oncall",
+      "operator": "m.iyer",
+      "pattern_key": "fraud_model_timeout",
+      "pattern_occurrence": 6,
+      "alert": {
+        "title": "fraud-scorer inference latency above budget",
+        "summary": "fraud-scorer p99 1.8s against a 250ms budget after a model promotion.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-20T12:36:00Z",
+        "signals": {
+          "error_samples": [
+            "model_inference_timeout_total 3120",
+            "WARN RuleEngineFallback: engaged for 22% of requests"
+          ]
+        }
+      },
+      "error_messages": [
+        "model_inference_timeout_total 3120",
+        "WARN RuleEngineFallback: engaged for 22% of requests"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-20T12:36:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "fraud-scorer alert fired"
+        },
+        {
+          "at": "2026-08-20T12:37:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-20T12:38:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-20T12:47:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-007 (fraud_scorer_model_timeout) based on matching prior incidents"
+        },
+        {
+          "at": "2026-08-20T13:05:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Restore the previous fraud model and warm the inference cache"
+        },
+        {
+          "at": "2026-08-20T13:09:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-08-20T13:16:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like kafka consumer lag at first glance.",
+        "Confirmed root cause: RC-007."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-007 (fraud_scorer_model_timeout) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-007"
+      },
+      "resolution": {
+        "fix": "Restore the previous fraud model and warm the inference cache",
+        "verified": true,
+        "time_to_resolve_minutes": 40,
+        "validated_runbook_id": "RB-018"
+      }
+    },
+    {
+      "incident_id": "INC-1030",
+      "service": "kafka-bus",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "environment": "prod",
+      "opened_at": "2026-08-21T20:30:00Z",
+      "channel": "#platform-oncall",
+      "operator": "d.rao",
+      "pattern_key": "nightly_batch_kafka_lag",
+      "pattern_occurrence": 4,
+      "alert": {
+        "title": "Kafka consumer lag on payments topic",
+        "summary": "payments-ledger consumer group lag 96k and climbing, coinciding with the nightly settlement batch.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-21T20:30:00Z",
+        "signals": {
+          "error_samples": [
+            "kafka_consumer_lag{group=payments-ledger} 96412",
+            "WARN SettlementBatchJob: batch volume 3.4x hourly median"
+          ]
+        }
+      },
+      "error_messages": [
+        "kafka_consumer_lag{group=payments-ledger} 96412",
+        "WARN SettlementBatchJob: batch volume 3.4x hourly median"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-21T20:30:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "kafka-bus alert fired"
+        },
+        {
+          "at": "2026-08-21T20:31:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-21T20:32:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-21T20:36:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-001 (kafka_consumer_lag) based on matching prior incidents"
+        },
+        {
+          "at": "2026-08-21T21:38:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Scale the payments-ledger consumer group and replay the affected partition"
+        },
+        {
+          "at": "2026-08-21T21:42:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-08-21T21:45:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like broker disk saturation at first glance.",
+        "Confirmed root cause: RC-001."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-001 (kafka_consumer_lag) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-001"
+      },
+      "resolution": {
+        "fix": "Scale the payments-ledger consumer group and replay the affected partition",
+        "verified": true,
+        "time_to_resolve_minutes": 75,
+        "validated_runbook_id": "RB-014"
+      }
+    },
+    {
+      "incident_id": "INC-1031",
+      "service": "payments-ledger",
+      "severity": "p1",
+      "incident_type": "latency",
+      "environment": "prod",
+      "opened_at": "2026-08-22T16:37:00Z",
+      "channel": "#identity-oncall",
+      "operator": "d.rao",
+      "pattern_key": "ledger_release_regression",
+      "pattern_occurrence": 4,
+      "alert": {
+        "title": "payments-ledger p99 latency spike after release",
+        "summary": "payments-ledger p99 2.9s with no CPU, memory, or queue saturation. Started within minutes of the v1.8.3 rollout.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-22T16:37:00Z",
+        "signals": {
+          "error_samples": [
+            "pg_stat_activity: 38 sessions waiting on lock: ledger_audit row",
+            "ledger_write_wait_ms p99 2400"
+          ]
+        }
+      },
+      "error_messages": [
+        "pg_stat_activity: 38 sessions waiting on lock: ledger_audit row",
+        "ledger_write_wait_ms p99 2400"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-22T16:37:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "payments-ledger alert fired"
+        },
+        {
+          "at": "2026-08-22T16:38:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-22T16:39:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-22T16:45:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-004 (deploy_regression_latency) based on matching prior incidents"
+        },
+        {
+          "at": "2026-08-22T16:57:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Roll payments-ledger back to v1.8.2 and move the ledger write off the request path"
+        },
+        {
+          "at": "2026-08-22T17:01:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-08-22T17:03:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like kafka consumer lag at first glance.",
+        "Confirmed root cause: RC-004."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-004 (deploy_regression_latency) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-004"
+      },
+      "resolution": {
+        "fix": "Roll payments-ledger back to v1.8.2 and move the ledger write off the request path",
+        "verified": true,
+        "time_to_resolve_minutes": 26,
+        "validated_runbook_id": "RB-032"
+      }
+    },
+    {
+      "incident_id": "INC-1032",
+      "service": "webhook-dispatcher",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "environment": "prod",
+      "opened_at": "2026-08-23T20:17:00Z",
+      "channel": "#platform-oncall",
+      "operator": "j.lindqvist",
+      "pattern_key": "webhook_retry_storm",
+      "pattern_occurrence": 2,
+      "alert": {
+        "title": "webhook-dispatcher retry queue growth",
+        "summary": "webhook retry queue 240k and growing; ledger latency degrading.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-23T20:17:00Z",
+        "signals": {
+          "error_samples": [
+            "webhook_retry_queue_depth 241887",
+            "webhook_retry_immediate_total 1.9e6"
+          ]
+        }
+      },
+      "error_messages": [
+        "webhook_retry_queue_depth 241887",
+        "webhook_retry_immediate_total 1.9e6"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-23T20:17:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "webhook-dispatcher alert fired"
+        },
+        {
+          "at": "2026-08-23T20:20:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-23T20:21:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-23T20:26:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Initial hypothesis: kafka consumer lag"
+        },
+        {
+          "at": "2026-08-23T20:29:00Z",
+          "actor": "operator",
+          "event": "diagnosis_rejected",
+          "detail": "Proposal rejected; evidence did not match the observed saturation profile"
+        },
+        {
+          "at": "2026-08-23T21:20:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Manual mitigation applied for RC-006; runbook not yet promoted"
+        },
+        {
+          "at": "2026-08-23T21:25:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like merchant endpoint outage at first glance.",
+        "Cause not confirmed before symptoms cleared."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Initial hypothesis: kafka consumer lag",
+        "outcome": "rejected",
+        "actual_root_cause_id": "RC-006"
+      },
+      "resolution": {
+        "fix": "Manual mitigation applied for RC-006; runbook not yet promoted",
+        "verified": false,
+        "time_to_resolve_minutes": 68,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1033",
+      "service": "auth-service",
+      "severity": "p1",
+      "incident_type": "error_rate",
+      "environment": "prod",
+      "opened_at": "2026-08-24T18:31:00Z",
+      "channel": "#payments-oncall",
+      "operator": "d.rao",
+      "pattern_key": "tls_rotation_auth_errors",
+      "pattern_occurrence": 1,
+      "alert": {
+        "title": "auth-service 5xx rate above 2%",
+        "summary": "auth-service 5xx rate 6.8%. Handshake failures spiking after the scheduled certificate rotation window.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-24T18:31:00Z",
+        "signals": {
+          "error_samples": [
+            "tls_handshake_failures_total 8123",
+            "ERROR x509: certificate has expired or is not yet valid",
+            "auth_token_validation_errors_total 5410"
+          ]
+        }
+      },
+      "error_messages": [
+        "tls_handshake_failures_total 8123",
+        "ERROR x509: certificate has expired or is not yet valid",
+        "auth_token_validation_errors_total 5410"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-24T18:31:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "auth-service alert fired"
+        },
+        {
+          "at": "2026-08-24T18:38:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-24T18:39:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-24T18:47:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Initial hypothesis: upstream identity provider outage"
+        },
+        {
+          "at": "2026-08-24T18:57:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Manual mitigation applied for RC-003; runbook not yet promoted"
+        },
+        {
+          "at": "2026-08-24T19:01:00Z",
+          "actor": "operator",
+          "event": "inconclusive",
+          "detail": "Symptoms cleared without a confirmed cause"
+        },
+        {
+          "at": "2026-08-24T19:02:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like upstream identity provider outage at first glance.",
+        "Cause not confirmed before symptoms cleared."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Initial hypothesis: upstream identity provider outage",
+        "outcome": "inconclusive",
+        "actual_root_cause_id": null
+      },
+      "resolution": {
+        "fix": "Manual mitigation applied for RC-003; runbook not yet promoted",
+        "verified": false,
+        "time_to_resolve_minutes": 31,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1034",
+      "service": "auth-service",
+      "severity": "p1",
+      "incident_type": "error_rate",
+      "environment": "prod",
+      "opened_at": "2026-08-25T00:52:00Z",
+      "channel": "#payments-oncall",
+      "operator": "s.okafor",
+      "pattern_key": "tls_rotation_auth_errors",
+      "pattern_occurrence": 2,
+      "alert": {
+        "title": "auth-service 5xx rate above 2%",
+        "summary": "auth-service 5xx rate 6.8%. Handshake failures spiking after the scheduled certificate rotation window.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-25T00:52:00Z",
+        "signals": {
+          "error_samples": [
+            "tls_handshake_failures_total 8123",
+            "ERROR x509: certificate has expired or is not yet valid",
+            "auth_token_validation_errors_total 5410"
+          ]
+        }
+      },
+      "error_messages": [
+        "tls_handshake_failures_total 8123",
+        "ERROR x509: certificate has expired or is not yet valid",
+        "auth_token_validation_errors_total 5410"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-25T00:52:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "auth-service alert fired"
+        },
+        {
+          "at": "2026-08-25T00:57:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-25T00:58:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-25T01:07:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Initial hypothesis: redis-cache failover"
+        },
+        {
+          "at": "2026-08-25T01:10:00Z",
+          "actor": "operator",
+          "event": "diagnosis_rejected",
+          "detail": "Proposal rejected; evidence did not match the observed saturation profile"
+        },
+        {
+          "at": "2026-08-25T01:35:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Manual mitigation applied for RC-003; runbook not yet promoted"
+        },
+        {
+          "at": "2026-08-25T01:47:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like upstream identity provider outage at first glance.",
+        "Cause not confirmed before symptoms cleared."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Initial hypothesis: redis-cache failover",
+        "outcome": "rejected",
+        "actual_root_cause_id": "RC-003"
+      },
+      "resolution": {
+        "fix": "Manual mitigation applied for RC-003; runbook not yet promoted",
+        "verified": false,
+        "time_to_resolve_minutes": 55,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1035",
+      "service": "checkout-api",
+      "severity": "p3",
+      "incident_type": "latency",
+      "environment": "prod",
+      "opened_at": "2026-08-25T03:31:00Z",
+      "channel": "#payments-oncall",
+      "operator": "m.iyer",
+      "alert": {
+        "title": "checkout-api p95 elevated on one region",
+        "summary": "checkout-api p95 1.1s in eu-west-1 only, lasted 9 minutes.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-25T03:31:00Z",
+        "signals": {
+          "error_samples": [
+            "checkout_p95_ms{region=eu-west-1} 1120"
+          ]
+        }
+      },
+      "error_messages": [
+        "checkout_p95_ms{region=eu-west-1} 1120"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-25T03:31:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "checkout-api alert fired"
+        },
+        {
+          "at": "2026-08-25T03:35:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-25T03:36:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-25T03:40:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Investigated upstream dependencies and traffic shape"
+        },
+        {
+          "at": "2026-08-25T03:44:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Regional network path degradation upstream of our infrastructure; self-resolved."
+        },
+        {
+          "at": "2026-08-25T03:48:00Z",
+          "actor": "operator",
+          "event": "inconclusive",
+          "detail": "Symptoms cleared without a confirmed cause"
+        },
+        {
+          "at": "2026-08-25T03:49:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Regional network path degradation upstream of our infrastructure; self-resolved."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Investigated upstream dependencies and traffic shape",
+        "outcome": "inconclusive",
+        "actual_root_cause_id": null
+      },
+      "resolution": {
+        "fix": "Regional network path degradation upstream of our infrastructure; self-resolved.",
+        "verified": false,
+        "time_to_resolve_minutes": 18,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1036",
+      "service": "redis-cache",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "environment": "prod",
+      "opened_at": "2026-08-25T11:35:00Z",
+      "channel": "#identity-oncall",
+      "operator": "j.lindqvist",
+      "pattern_key": "cache_stampede",
+      "pattern_occurrence": 2,
+      "alert": {
+        "title": "redis-cache eviction storm",
+        "summary": "redis-cache evicted 1.2M keys in 4 minutes; payments-ledger query rate 9x.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-25T11:35:00Z",
+        "signals": {
+          "error_samples": [
+            "redis_evicted_keys_total 1214000",
+            "ledger_query_rate 9.1x baseline"
+          ]
+        }
+      },
+      "error_messages": [
+        "redis_evicted_keys_total 1214000",
+        "ledger_query_rate 9.1x baseline"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-25T11:35:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "redis-cache alert fired"
+        },
+        {
+          "at": "2026-08-25T11:42:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-25T11:43:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-25T11:48:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Initial hypothesis: memory leak"
+        },
+        {
+          "at": "2026-08-25T11:51:00Z",
+          "actor": "operator",
+          "event": "diagnosis_rejected",
+          "detail": "Proposal rejected; evidence did not match the observed saturation profile"
+        },
+        {
+          "at": "2026-08-25T12:21:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Manual mitigation applied for RC-008; runbook not yet promoted"
+        },
+        {
+          "at": "2026-08-25T12:29:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like redis failover flap at first glance.",
+        "Cause not confirmed before symptoms cleared."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Initial hypothesis: memory leak",
+        "outcome": "rejected",
+        "actual_root_cause_id": "RC-008"
+      },
+      "resolution": {
+        "fix": "Manual mitigation applied for RC-008; runbook not yet promoted",
+        "verified": false,
+        "time_to_resolve_minutes": 54,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1037",
+      "service": "webhook-dispatcher",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "environment": "prod",
+      "opened_at": "2026-08-25T19:14:00Z",
+      "channel": "#payments-oncall",
+      "operator": "m.iyer",
+      "pattern_key": "webhook_retry_storm",
+      "pattern_occurrence": 3,
+      "alert": {
+        "title": "webhook-dispatcher retry queue growth",
+        "summary": "webhook retry queue 240k and growing; ledger latency degrading.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-25T19:14:00Z",
+        "signals": {
+          "error_samples": [
+            "webhook_retry_queue_depth 241887",
+            "webhook_retry_immediate_total 1.9e6"
+          ]
+        }
+      },
+      "error_messages": [
+        "webhook_retry_queue_depth 241887",
+        "webhook_retry_immediate_total 1.9e6"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-25T19:14:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "webhook-dispatcher alert fired"
+        },
+        {
+          "at": "2026-08-25T19:18:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-25T19:19:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-25T19:22:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-006 (webhook_retry_storm) based on matching prior incidents"
+        },
+        {
+          "at": "2026-08-25T19:55:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Cap webhook retry concurrency and add exponential backoff"
+        },
+        {
+          "at": "2026-08-25T19:59:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-08-25T20:04:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like merchant endpoint outage at first glance.",
+        "Confirmed root cause: RC-006."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-006 (webhook_retry_storm) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-006"
+      },
+      "resolution": {
+        "fix": "Cap webhook retry concurrency and add exponential backoff",
+        "verified": true,
+        "time_to_resolve_minutes": 50,
+        "validated_runbook_id": "RB-040"
+      }
+    },
+    {
+      "incident_id": "INC-1038",
+      "service": "checkout-api",
+      "severity": "p1",
+      "incident_type": "latency",
+      "environment": "prod",
+      "opened_at": "2026-08-26T18:18:00Z",
+      "channel": "#identity-oncall",
+      "operator": "s.okafor",
+      "pattern_key": "ledger_deploy_checkout_latency",
+      "pattern_occurrence": 6,
+      "alert": {
+        "title": "checkout-api p99 latency above SLO",
+        "summary": "checkout-api p99 latency 4.2s (SLO 800ms). Elevated ledger confirmation timeouts starting shortly after the payments-ledger deploy.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-26T18:18:00Z",
+        "signals": {
+          "error_samples": [
+            "checkout.ledger.confirm timeout after 3000ms (svc=payments-ledger)",
+            "WARN LedgerConfirmationClient: 412 in-flight confirmations exceeded budget",
+            "payments_ledger_consumer_lag_seconds 1840"
+          ]
+        }
+      },
+      "error_messages": [
+        "checkout.ledger.confirm timeout after 3000ms (svc=payments-ledger)",
+        "WARN LedgerConfirmationClient: 412 in-flight confirmations exceeded budget",
+        "payments_ledger_consumer_lag_seconds 1840"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-26T18:18:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "checkout-api alert fired"
+        },
+        {
+          "at": "2026-08-26T18:21:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-26T18:22:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-26T18:30:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-001 (kafka_consumer_lag) based on matching prior incidents"
+        },
+        {
+          "at": "2026-08-26T18:36:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Scale the payments-ledger consumer group and replay the affected partition"
+        },
+        {
+          "at": "2026-08-26T18:40:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-08-26T18:46:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like checkout-api database connection pool exhaustion at first glance.",
+        "Confirmed root cause: RC-001."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-001 (kafka_consumer_lag) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-001"
+      },
+      "resolution": {
+        "fix": "Scale the payments-ledger consumer group and replay the affected partition",
+        "verified": true,
+        "time_to_resolve_minutes": 28,
+        "validated_runbook_id": "RB-014"
+      }
+    },
+    {
+      "incident_id": "INC-1039",
+      "service": "auth-service",
+      "severity": "p3",
+      "incident_type": "latency",
+      "environment": "prod",
+      "opened_at": "2026-08-27T18:58:00Z",
+      "channel": "#platform-oncall",
+      "operator": "m.iyer",
+      "pattern_key": "auth_redis_dependency",
+      "pattern_occurrence": 2,
+      "alert": {
+        "title": "auth-service token validation latency elevated",
+        "summary": "auth-service token validation p99 900ms; redis-cache dependency slow.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-27T18:58:00Z",
+        "signals": {
+          "error_samples": [
+            "auth_redis_latency_ms p99 880",
+            "cache_hit_ratio 0.52"
+          ]
+        }
+      },
+      "error_messages": [
+        "auth_redis_latency_ms p99 880",
+        "cache_hit_ratio 0.52"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-27T18:58:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "auth-service alert fired"
+        },
+        {
+          "at": "2026-08-27T18:59:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-27T19:00:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-27T19:11:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Initial hypothesis: identity provider slowdown"
+        },
+        {
+          "at": "2026-08-27T19:14:00Z",
+          "actor": "operator",
+          "event": "diagnosis_rejected",
+          "detail": "Proposal rejected; evidence did not match the observed saturation profile"
+        },
+        {
+          "at": "2026-08-27T19:22:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Manual mitigation applied for RC-002; runbook not yet promoted"
+        },
+        {
+          "at": "2026-08-27T19:27:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like identity provider slowdown at first glance.",
+        "Cause not confirmed before symptoms cleared."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Initial hypothesis: identity provider slowdown",
+        "outcome": "rejected",
+        "actual_root_cause_id": "RC-002"
+      },
+      "resolution": {
+        "fix": "Manual mitigation applied for RC-002; runbook not yet promoted",
+        "verified": false,
+        "time_to_resolve_minutes": 29,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1040",
+      "service": "payments-ledger",
+      "severity": "p1",
+      "incident_type": "latency",
+      "environment": "prod",
+      "opened_at": "2026-08-28T22:02:00Z",
+      "channel": "#identity-oncall",
+      "operator": "d.rao",
+      "pattern_key": "ledger_release_regression",
+      "pattern_occurrence": 5,
+      "alert": {
+        "title": "payments-ledger p99 latency spike after release",
+        "summary": "payments-ledger p99 2.9s with no CPU, memory, or queue saturation. Started within minutes of the v1.8.3 rollout.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-28T22:02:00Z",
+        "signals": {
+          "error_samples": [
+            "pg_stat_activity: 38 sessions waiting on lock: ledger_audit row",
+            "ledger_write_wait_ms p99 2400"
+          ]
+        }
+      },
+      "error_messages": [
+        "pg_stat_activity: 38 sessions waiting on lock: ledger_audit row",
+        "ledger_write_wait_ms p99 2400"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-28T22:02:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "payments-ledger alert fired"
+        },
+        {
+          "at": "2026-08-28T22:08:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-28T22:09:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-28T22:12:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-004 (deploy_regression_latency) based on matching prior incidents"
+        },
+        {
+          "at": "2026-08-28T22:59:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Roll payments-ledger back to v1.8.2 and move the ledger write off the request path"
+        },
+        {
+          "at": "2026-08-28T23:03:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-08-28T23:10:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like kafka consumer lag at first glance.",
+        "Confirmed root cause: RC-004."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-004 (deploy_regression_latency) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-004"
+      },
+      "resolution": {
+        "fix": "Roll payments-ledger back to v1.8.2 and move the ledger write off the request path",
+        "verified": true,
+        "time_to_resolve_minutes": 68,
+        "validated_runbook_id": "RB-032"
+      }
+    },
+    {
+      "incident_id": "INC-1041",
+      "service": "auth-service",
+      "severity": "p1",
+      "incident_type": "error_rate",
+      "environment": "prod",
+      "opened_at": "2026-08-30T06:05:00Z",
+      "channel": "#payments-oncall",
+      "operator": "j.lindqvist",
+      "pattern_key": "tls_rotation_auth_errors",
+      "pattern_occurrence": 3,
+      "alert": {
+        "title": "auth-service 5xx rate above 2%",
+        "summary": "auth-service 5xx rate 6.8%. Handshake failures spiking after the scheduled certificate rotation window.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-30T06:05:00Z",
+        "signals": {
+          "error_samples": [
+            "tls_handshake_failures_total 8123",
+            "ERROR x509: certificate has expired or is not yet valid",
+            "auth_token_validation_errors_total 5410"
+          ]
+        }
+      },
+      "error_messages": [
+        "tls_handshake_failures_total 8123",
+        "ERROR x509: certificate has expired or is not yet valid",
+        "auth_token_validation_errors_total 5410"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-30T06:05:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "auth-service alert fired"
+        },
+        {
+          "at": "2026-08-30T06:10:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-30T06:11:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-30T06:21:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-003 (tls_cert_expiry) based on matching prior incidents"
+        },
+        {
+          "at": "2026-08-30T07:03:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Rotate the internal TLS certificate and reload auth-service"
+        },
+        {
+          "at": "2026-08-30T07:07:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-08-30T07:11:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like upstream identity provider outage at first glance.",
+        "Confirmed root cause: RC-003."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-003 (tls_cert_expiry) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-003"
+      },
+      "resolution": {
+        "fix": "Rotate the internal TLS certificate and reload auth-service",
+        "verified": true,
+        "time_to_resolve_minutes": 66,
+        "validated_runbook_id": "RB-007"
+      }
+    },
+    {
+      "incident_id": "INC-1042",
+      "service": "checkout-api",
+      "severity": "p3",
+      "incident_type": "latency",
+      "environment": "prod",
+      "opened_at": "2026-08-31T14:37:00Z",
+      "channel": "#platform-oncall",
+      "operator": "k.novak",
+      "alert": {
+        "title": "checkout-api p95 elevated on one region",
+        "summary": "checkout-api p95 1.1s in eu-west-1 only, lasted 9 minutes.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-08-31T14:37:00Z",
+        "signals": {
+          "error_samples": [
+            "checkout_p95_ms{region=eu-west-1} 1120"
+          ]
+        }
+      },
+      "error_messages": [
+        "checkout_p95_ms{region=eu-west-1} 1120"
+      ],
+      "timeline": [
+        {
+          "at": "2026-08-31T14:37:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "checkout-api alert fired"
+        },
+        {
+          "at": "2026-08-31T14:38:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-08-31T14:39:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-08-31T14:45:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Investigated upstream dependencies and traffic shape"
+        },
+        {
+          "at": "2026-08-31T15:07:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Regional network path degradation upstream of our infrastructure; self-resolved."
+        },
+        {
+          "at": "2026-08-31T15:11:00Z",
+          "actor": "operator",
+          "event": "inconclusive",
+          "detail": "Symptoms cleared without a confirmed cause"
+        },
+        {
+          "at": "2026-08-31T15:12:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Regional network path degradation upstream of our infrastructure; self-resolved."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Investigated upstream dependencies and traffic shape",
+        "outcome": "inconclusive",
+        "actual_root_cause_id": null
+      },
+      "resolution": {
+        "fix": "Regional network path degradation upstream of our infrastructure; self-resolved.",
+        "verified": false,
+        "time_to_resolve_minutes": 35,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1043",
+      "service": "redis-cache",
+      "severity": "p2",
+      "incident_type": "availability",
+      "environment": "prod",
+      "opened_at": "2026-09-01T02:06:00Z",
+      "channel": "#identity-oncall",
+      "operator": "j.lindqvist",
+      "pattern_key": "redis_failover_flap",
+      "pattern_occurrence": 6,
+      "alert": {
+        "title": "redis-cache failover flap",
+        "summary": "redis-cache sentinel reported 6 role changes in 10 minutes; hit rate 41%.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-09-01T02:06:00Z",
+        "signals": {
+          "error_samples": [
+            "redis_sentinel_role_changes_total 6",
+            "redis_connection_errors_total 12480",
+            "cache_hit_ratio 0.41"
+          ]
+        }
+      },
+      "error_messages": [
+        "redis_sentinel_role_changes_total 6",
+        "redis_connection_errors_total 12480",
+        "cache_hit_ratio 0.41"
+      ],
+      "timeline": [
+        {
+          "at": "2026-09-01T02:06:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "redis-cache alert fired"
+        },
+        {
+          "at": "2026-09-01T02:10:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-09-01T02:11:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-09-01T02:16:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-002 (redis_failover_flap) based on matching prior incidents"
+        },
+        {
+          "at": "2026-09-01T02:31:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Pin the Redis primary and widen the sentinel failover window"
+        },
+        {
+          "at": "2026-09-01T02:35:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-09-01T02:39:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like cache stampede after eviction at first glance.",
+        "Confirmed root cause: RC-002."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-002 (redis_failover_flap) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-002"
+      },
+      "resolution": {
+        "fix": "Pin the Redis primary and widen the sentinel failover window",
+        "verified": true,
+        "time_to_resolve_minutes": 33,
+        "validated_runbook_id": "RB-021"
+      }
+    },
+    {
+      "incident_id": "INC-1044",
+      "service": "checkout-api",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "environment": "prod",
+      "opened_at": "2026-09-01T21:24:00Z",
+      "channel": "#payments-oncall",
+      "operator": "k.novak",
+      "pattern_key": "checkout_burst_pool",
+      "pattern_occurrence": 1,
+      "alert": {
+        "title": "checkout-api connection pool saturated",
+        "summary": "checkout-api DB pool at 100% utilisation with 900 queued requests.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-09-01T21:24:00Z",
+        "signals": {
+          "error_samples": [
+            "db_pool_utilisation 1.0",
+            "db_pool_waiters 900",
+            "WARN HikariPool: connection acquisition 4210ms"
+          ]
+        }
+      },
+      "error_messages": [
+        "db_pool_utilisation 1.0",
+        "db_pool_waiters 900",
+        "WARN HikariPool: connection acquisition 4210ms"
+      ],
+      "timeline": [
+        {
+          "at": "2026-09-01T21:24:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "checkout-api alert fired"
+        },
+        {
+          "at": "2026-09-01T21:25:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-09-01T21:26:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-09-01T21:34:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Initial hypothesis: payments-ledger deploy regression"
+        },
+        {
+          "at": "2026-09-01T22:20:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Manual mitigation applied for RC-005; runbook not yet promoted"
+        },
+        {
+          "at": "2026-09-01T22:24:00Z",
+          "actor": "operator",
+          "event": "inconclusive",
+          "detail": "Symptoms cleared without a confirmed cause"
+        },
+        {
+          "at": "2026-09-01T22:28:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like payments-ledger deploy regression at first glance.",
+        "Cause not confirmed before symptoms cleared."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Initial hypothesis: payments-ledger deploy regression",
+        "outcome": "inconclusive",
+        "actual_root_cause_id": null
+      },
+      "resolution": {
+        "fix": "Manual mitigation applied for RC-005; runbook not yet promoted",
+        "verified": false,
+        "time_to_resolve_minutes": 64,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1045",
+      "service": "webhook-dispatcher",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "environment": "prod",
+      "opened_at": "2026-09-03T06:17:00Z",
+      "channel": "#payments-oncall",
+      "operator": "d.rao",
+      "pattern_key": "webhook_retry_storm",
+      "pattern_occurrence": 4,
+      "alert": {
+        "title": "webhook-dispatcher retry queue growth",
+        "summary": "webhook retry queue 240k and growing; ledger latency degrading.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-09-03T06:17:00Z",
+        "signals": {
+          "error_samples": [
+            "webhook_retry_queue_depth 241887",
+            "webhook_retry_immediate_total 1.9e6"
+          ]
+        }
+      },
+      "error_messages": [
+        "webhook_retry_queue_depth 241887",
+        "webhook_retry_immediate_total 1.9e6"
+      ],
+      "timeline": [
+        {
+          "at": "2026-09-03T06:17:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "webhook-dispatcher alert fired"
+        },
+        {
+          "at": "2026-09-03T06:23:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-09-03T06:24:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-09-03T06:31:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-006 (webhook_retry_storm) based on matching prior incidents"
+        },
+        {
+          "at": "2026-09-03T07:07:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Cap webhook retry concurrency and add exponential backoff"
+        },
+        {
+          "at": "2026-09-03T07:11:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-09-03T07:16:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like merchant endpoint outage at first glance.",
+        "Confirmed root cause: RC-006."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-006 (webhook_retry_storm) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-006"
+      },
+      "resolution": {
+        "fix": "Cap webhook retry concurrency and add exponential backoff",
+        "verified": true,
+        "time_to_resolve_minutes": 59,
+        "validated_runbook_id": "RB-040"
+      }
+    },
+    {
+      "incident_id": "INC-1046",
+      "service": "kafka-bus",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "environment": "prod",
+      "opened_at": "2026-09-03T15:48:00Z",
+      "channel": "#identity-oncall",
+      "operator": "m.iyer",
+      "pattern_key": "nightly_batch_kafka_lag",
+      "pattern_occurrence": 5,
+      "alert": {
+        "title": "Kafka consumer lag on payments topic",
+        "summary": "payments-ledger consumer group lag 96k and climbing, coinciding with the nightly settlement batch.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-09-03T15:48:00Z",
+        "signals": {
+          "error_samples": [
+            "kafka_consumer_lag{group=payments-ledger} 96412",
+            "WARN SettlementBatchJob: batch volume 3.4x hourly median"
+          ]
+        }
+      },
+      "error_messages": [
+        "kafka_consumer_lag{group=payments-ledger} 96412",
+        "WARN SettlementBatchJob: batch volume 3.4x hourly median"
+      ],
+      "timeline": [
+        {
+          "at": "2026-09-03T15:48:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "kafka-bus alert fired"
+        },
+        {
+          "at": "2026-09-03T15:54:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-09-03T15:55:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-09-03T16:00:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-001 (kafka_consumer_lag) based on matching prior incidents"
+        },
+        {
+          "at": "2026-09-03T16:19:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Scale the payments-ledger consumer group and replay the affected partition"
+        },
+        {
+          "at": "2026-09-03T16:23:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-09-03T16:24:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like broker disk saturation at first glance.",
+        "Confirmed root cause: RC-001."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-001 (kafka_consumer_lag) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-001"
+      },
+      "resolution": {
+        "fix": "Scale the payments-ledger consumer group and replay the affected partition",
+        "verified": true,
+        "time_to_resolve_minutes": 36,
+        "validated_runbook_id": "RB-014"
+      }
+    },
+    {
+      "incident_id": "INC-1047",
+      "service": "redis-cache",
+      "severity": "p2",
+      "incident_type": "availability",
+      "environment": "prod",
+      "opened_at": "2026-09-03T18:03:00Z",
+      "channel": "#identity-oncall",
+      "operator": "k.novak",
+      "pattern_key": "redis_failover_flap",
+      "pattern_occurrence": 7,
+      "alert": {
+        "title": "redis-cache failover flap",
+        "summary": "redis-cache sentinel reported 6 role changes in 10 minutes; hit rate 41%.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-09-03T18:03:00Z",
+        "signals": {
+          "error_samples": [
+            "redis_sentinel_role_changes_total 6",
+            "redis_connection_errors_total 12480",
+            "cache_hit_ratio 0.41"
+          ]
+        }
+      },
+      "error_messages": [
+        "redis_sentinel_role_changes_total 6",
+        "redis_connection_errors_total 12480",
+        "cache_hit_ratio 0.41"
+      ],
+      "timeline": [
+        {
+          "at": "2026-09-03T18:03:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "redis-cache alert fired"
+        },
+        {
+          "at": "2026-09-03T18:04:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-09-03T18:05:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-09-03T18:12:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-002 (redis_failover_flap) based on matching prior incidents"
+        },
+        {
+          "at": "2026-09-03T18:33:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Pin the Redis primary and widen the sentinel failover window"
+        },
+        {
+          "at": "2026-09-03T18:37:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-09-03T18:39:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like cache stampede after eviction at first glance.",
+        "Confirmed root cause: RC-002."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-002 (redis_failover_flap) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-002"
+      },
+      "resolution": {
+        "fix": "Pin the Redis primary and widen the sentinel failover window",
+        "verified": true,
+        "time_to_resolve_minutes": 36,
+        "validated_runbook_id": "RB-021"
+      }
+    },
+    {
+      "incident_id": "INC-1048",
+      "service": "webhook-dispatcher",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "environment": "prod",
+      "opened_at": "2026-09-05T00:39:00Z",
+      "channel": "#payments-oncall",
+      "operator": "j.lindqvist",
+      "pattern_key": "webhook_retry_storm",
+      "pattern_occurrence": 5,
+      "alert": {
+        "title": "webhook-dispatcher retry queue growth",
+        "summary": "webhook retry queue 240k and growing; ledger latency degrading.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-09-05T00:39:00Z",
+        "signals": {
+          "error_samples": [
+            "webhook_retry_queue_depth 241887",
+            "webhook_retry_immediate_total 1.9e6"
+          ]
+        }
+      },
+      "error_messages": [
+        "webhook_retry_queue_depth 241887",
+        "webhook_retry_immediate_total 1.9e6"
+      ],
+      "timeline": [
+        {
+          "at": "2026-09-05T00:39:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "webhook-dispatcher alert fired"
+        },
+        {
+          "at": "2026-09-05T00:43:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-09-05T00:44:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-09-05T00:53:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-006 (webhook_retry_storm) based on matching prior incidents"
+        },
+        {
+          "at": "2026-09-05T01:05:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Cap webhook retry concurrency and add exponential backoff"
+        },
+        {
+          "at": "2026-09-05T01:09:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-09-05T01:13:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like merchant endpoint outage at first glance.",
+        "Confirmed root cause: RC-006."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-006 (webhook_retry_storm) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-006"
+      },
+      "resolution": {
+        "fix": "Cap webhook retry concurrency and add exponential backoff",
+        "verified": true,
+        "time_to_resolve_minutes": 34,
+        "validated_runbook_id": "RB-040"
+      }
+    },
+    {
+      "incident_id": "INC-1049",
+      "service": "fraud-scorer",
+      "severity": "p3",
+      "incident_type": "error_rate",
+      "environment": "prod",
+      "opened_at": "2026-09-06T02:45:00Z",
+      "channel": "#payments-oncall",
+      "operator": "j.lindqvist",
+      "alert": {
+        "title": "fraud-scorer rule engine 4xx spike",
+        "summary": "fraud-scorer returned 4xx for 3.1% of requests for 6 minutes.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-09-06T02:45:00Z",
+        "signals": {
+          "error_samples": [
+            "fraud_rule_validation_4xx_total 4210"
+          ]
+        }
+      },
+      "error_messages": [
+        "fraud_rule_validation_4xx_total 4210"
+      ],
+      "timeline": [
+        {
+          "at": "2026-09-06T02:45:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "fraud-scorer alert fired"
+        },
+        {
+          "at": "2026-09-06T02:51:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-09-06T02:52:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-09-06T02:54:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Investigated upstream dependencies and traffic shape"
+        },
+        {
+          "at": "2026-09-06T03:13:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Merchant sent a malformed payload; schema validation tightened and no infra change was needed."
+        },
+        {
+          "at": "2026-09-06T03:17:00Z",
+          "actor": "operator",
+          "event": "inconclusive",
+          "detail": "Symptoms cleared without a confirmed cause"
+        },
+        {
+          "at": "2026-09-06T03:18:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Merchant sent a malformed payload; schema validation tightened and no infra change was needed."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Investigated upstream dependencies and traffic shape",
+        "outcome": "inconclusive",
+        "actual_root_cause_id": null
+      },
+      "resolution": {
+        "fix": "Merchant sent a malformed payload; schema validation tightened and no infra change was needed.",
+        "verified": false,
+        "time_to_resolve_minutes": 33,
+        "validated_runbook_id": null
+      }
+    },
+    {
+      "incident_id": "INC-1050",
+      "service": "webhook-dispatcher",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "environment": "prod",
+      "opened_at": "2026-09-06T11:18:00Z",
+      "channel": "#platform-oncall",
+      "operator": "k.novak",
+      "pattern_key": "webhook_retry_storm",
+      "pattern_occurrence": 6,
+      "alert": {
+        "title": "webhook-dispatcher retry queue growth",
+        "summary": "webhook retry queue 240k and growing; ledger latency degrading.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-09-06T11:18:00Z",
+        "signals": {
+          "error_samples": [
+            "webhook_retry_queue_depth 241887",
+            "webhook_retry_immediate_total 1.9e6"
+          ]
+        }
+      },
+      "error_messages": [
+        "webhook_retry_queue_depth 241887",
+        "webhook_retry_immediate_total 1.9e6"
+      ],
+      "timeline": [
+        {
+          "at": "2026-09-06T11:18:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "webhook-dispatcher alert fired"
+        },
+        {
+          "at": "2026-09-06T11:21:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-09-06T11:22:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-09-06T11:30:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-006 (webhook_retry_storm) based on matching prior incidents"
+        },
+        {
+          "at": "2026-09-06T11:58:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Cap webhook retry concurrency and add exponential backoff"
+        },
+        {
+          "at": "2026-09-06T12:02:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-09-06T12:03:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like merchant endpoint outage at first glance.",
+        "Confirmed root cause: RC-006."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-006 (webhook_retry_storm) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-006"
+      },
+      "resolution": {
+        "fix": "Cap webhook retry concurrency and add exponential backoff",
+        "verified": true,
+        "time_to_resolve_minutes": 45,
+        "validated_runbook_id": "RB-040"
+      }
+    },
+    {
+      "incident_id": "INC-1051",
+      "service": "auth-service",
+      "severity": "p1",
+      "incident_type": "error_rate",
+      "environment": "prod",
+      "opened_at": "2026-09-07T16:20:00Z",
+      "channel": "#identity-oncall",
+      "operator": "d.rao",
+      "pattern_key": "tls_rotation_auth_errors",
+      "pattern_occurrence": 4,
+      "alert": {
+        "title": "auth-service 5xx rate above 2%",
+        "summary": "auth-service 5xx rate 6.8%. Handshake failures spiking after the scheduled certificate rotation window.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-09-07T16:20:00Z",
+        "signals": {
+          "error_samples": [
+            "tls_handshake_failures_total 8123",
+            "ERROR x509: certificate has expired or is not yet valid",
+            "auth_token_validation_errors_total 5410"
+          ]
+        }
+      },
+      "error_messages": [
+        "tls_handshake_failures_total 8123",
+        "ERROR x509: certificate has expired or is not yet valid",
+        "auth_token_validation_errors_total 5410"
+      ],
+      "timeline": [
+        {
+          "at": "2026-09-07T16:20:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "auth-service alert fired"
+        },
+        {
+          "at": "2026-09-07T16:26:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-09-07T16:27:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-09-07T16:38:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-003 (tls_cert_expiry) based on matching prior incidents"
+        },
+        {
+          "at": "2026-09-07T17:32:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Rotate the internal TLS certificate and reload auth-service"
+        },
+        {
+          "at": "2026-09-07T17:36:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-09-07T17:41:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like upstream identity provider outage at first glance.",
+        "Confirmed root cause: RC-003."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-003 (tls_cert_expiry) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-003"
+      },
+      "resolution": {
+        "fix": "Rotate the internal TLS certificate and reload auth-service",
+        "verified": true,
+        "time_to_resolve_minutes": 81,
+        "validated_runbook_id": "RB-007"
+      }
+    },
+    {
+      "incident_id": "INC-1052",
+      "service": "auth-service",
+      "severity": "p1",
+      "incident_type": "error_rate",
+      "environment": "prod",
+      "opened_at": "2026-09-08T12:02:00Z",
+      "channel": "#identity-oncall",
+      "operator": "d.rao",
+      "pattern_key": "tls_rotation_auth_errors",
+      "pattern_occurrence": 5,
+      "alert": {
+        "title": "auth-service 5xx rate above 2%",
+        "summary": "auth-service 5xx rate 6.8%. Handshake failures spiking after the scheduled certificate rotation window.",
+        "source": "pagerduty-sim",
+        "fired_at": "2026-09-08T12:02:00Z",
+        "signals": {
+          "error_samples": [
+            "tls_handshake_failures_total 8123",
+            "ERROR x509: certificate has expired or is not yet valid",
+            "auth_token_validation_errors_total 5410"
+          ]
+        }
+      },
+      "error_messages": [
+        "tls_handshake_failures_total 8123",
+        "ERROR x509: certificate has expired or is not yet valid",
+        "auth_token_validation_errors_total 5410"
+      ],
+      "timeline": [
+        {
+          "at": "2026-09-08T12:02:00Z",
+          "actor": "pager",
+          "event": "alert_fired",
+          "detail": "auth-service alert fired"
+        },
+        {
+          "at": "2026-09-08T12:04:00Z",
+          "actor": "operator",
+          "event": "acknowledged",
+          "detail": "Incident acknowledged, triage started"
+        },
+        {
+          "at": "2026-09-08T12:05:00Z",
+          "actor": "agent",
+          "event": "recall",
+          "detail": "Recalled prior incidents and validated runbooks for this service and symptom"
+        },
+        {
+          "at": "2026-09-08T12:14:00Z",
+          "actor": "agent",
+          "event": "proposed_diagnosis",
+          "detail": "Confirmed cause RC-003 (tls_cert_expiry) based on matching prior incidents"
+        },
+        {
+          "at": "2026-09-08T12:48:00Z",
+          "actor": "operator",
+          "event": "mitigation_applied",
+          "detail": "Rotate the internal TLS certificate and reload auth-service"
+        },
+        {
+          "at": "2026-09-08T12:52:00Z",
+          "actor": "operator",
+          "event": "resolution_confirmed",
+          "detail": "Fix verified, metrics back in SLO"
+        },
+        {
+          "at": "2026-09-08T13:00:00Z",
+          "actor": "operator",
+          "event": "resolved",
+          "detail": "Incident closed"
+        }
+      ],
+      "operator_notes": [
+        "Alert looked like upstream identity provider outage at first glance.",
+        "Confirmed root cause: RC-003."
+      ],
+      "diagnosis": {
+        "proposed_by": "agent",
+        "hypothesis": "Confirmed cause RC-003 (tls_cert_expiry) based on matching prior incidents",
+        "outcome": "confirmed",
+        "actual_root_cause_id": "RC-003"
+      },
+      "resolution": {
+        "fix": "Rotate the internal TLS certificate and reload auth-service",
+        "verified": true,
+        "time_to_resolve_minutes": 58,
+        "validated_runbook_id": "RB-007"
+      }
+    }
+  ]
+}

@@ -1,0 +1,140 @@
+{
+  "postmortems": [
+    {
+      "postmortem_id": "PM-001",
+      "incident_id": "INC-1008",
+      "root_cause_id": "RC-007",
+      "service": "fraud-scorer",
+      "root_cause": "fraud-scorer model inference exceeded its timeout budget",
+      "detail": "A newly promoted fraud model exceeded the inference timeout budget. Requests fell back to the slow rule engine, which pushed checkout p99 over SLO.",
+      "contributing_factors": [
+        "Alert thresholds did not distinguish this pattern from unrelated latency",
+        "No automated guardrail caught the change before it reached production"
+      ],
+      "prevention": [
+        "Promote RB-018 into the on-call runbook index",
+        "Add a targeted pre-deploy check for this failure mode"
+      ],
+      "time_to_resolve_minutes": 73
+    },
+    {
+      "postmortem_id": "PM-002",
+      "incident_id": "INC-1013",
+      "root_cause_id": "RC-002",
+      "service": "redis-cache",
+      "root_cause": "Redis sentinel failover flap caused connection churn",
+      "detail": "A redis-cache sentinel failover flapped between replicas. Clients reconnected repeatedly, so connection setup cost dominated latency and cache hit rate collapsed.",
+      "contributing_factors": [
+        "Alert thresholds did not distinguish this pattern from unrelated latency",
+        "No automated guardrail caught the change before it reached production"
+      ],
+      "prevention": [
+        "Promote RB-021 into the on-call runbook index",
+        "Add a targeted pre-deploy check for this failure mode"
+      ],
+      "time_to_resolve_minutes": 49
+    },
+    {
+      "postmortem_id": "PM-003",
+      "incident_id": "INC-1016",
+      "root_cause_id": "RC-007",
+      "service": "fraud-scorer",
+      "root_cause": "fraud-scorer model inference exceeded its timeout budget",
+      "detail": "A newly promoted fraud model exceeded the inference timeout budget. Requests fell back to the slow rule engine, which pushed checkout p99 over SLO.",
+      "contributing_factors": [
+        "Alert thresholds did not distinguish this pattern from unrelated latency",
+        "No automated guardrail caught the change before it reached production"
+      ],
+      "prevention": [
+        "Promote RB-018 into the on-call runbook index",
+        "Add a targeted pre-deploy check for this failure mode"
+      ],
+      "time_to_resolve_minutes": 42
+    },
+    {
+      "postmortem_id": "PM-004",
+      "incident_id": "INC-1017",
+      "root_cause_id": "RC-001",
+      "service": "checkout-api",
+      "root_cause": "Kafka consumer lag on payments-ledger after a deploy or nightly batch",
+      "detail": "A payments-ledger deploy or the nightly settlement batch pushed far more events through the payments topic than the consumer group could drain. Lag crossed the alerting threshold and checkout requests that wait on ledger confirmation timed out.",
+      "contributing_factors": [
+        "Alert thresholds did not distinguish this pattern from unrelated latency",
+        "No automated guardrail caught the change before it reached production"
+      ],
+      "prevention": [
+        "Promote RB-014 into the on-call runbook index",
+        "Add a targeted pre-deploy check for this failure mode"
+      ],
+      "time_to_resolve_minutes": 68
+    },
+    {
+      "postmortem_id": "PM-005",
+      "incident_id": "INC-1018",
+      "root_cause_id": "RC-004",
+      "service": "payments-ledger",
+      "root_cause": "payments-ledger v1.8.3 added a synchronous ledger write on the checkout path",
+      "detail": "payments-ledger v1.8.3 introduced a synchronous write to the ledger audit table inside the checkout request path. The write serialised behind a hot row lock and inflated p99 latency without any infrastructure saturation.",
+      "contributing_factors": [
+        "Alert thresholds did not distinguish this pattern from unrelated latency",
+        "No automated guardrail caught the change before it reached production"
+      ],
+      "prevention": [
+        "Promote RB-032 into the on-call runbook index",
+        "Add a targeted pre-deploy check for this failure mode"
+      ],
+      "time_to_resolve_minutes": 53
+    },
+    {
+      "postmortem_id": "PM-006",
+      "incident_id": "INC-1019",
+      "root_cause_id": "RC-007",
+      "service": "fraud-scorer",
+      "root_cause": "fraud-scorer model inference exceeded its timeout budget",
+      "detail": "A newly promoted fraud model exceeded the inference timeout budget. Requests fell back to the slow rule engine, which pushed checkout p99 over SLO.",
+      "contributing_factors": [
+        "Alert thresholds did not distinguish this pattern from unrelated latency",
+        "No automated guardrail caught the change before it reached production"
+      ],
+      "prevention": [
+        "Promote RB-018 into the on-call runbook index",
+        "Add a targeted pre-deploy check for this failure mode"
+      ],
+      "time_to_resolve_minutes": 53
+    },
+    {
+      "postmortem_id": "PM-007",
+      "incident_id": "INC-1020",
+      "root_cause_id": "RC-001",
+      "service": "checkout-api",
+      "root_cause": "Kafka consumer lag on payments-ledger after a deploy or nightly batch",
+      "detail": "A payments-ledger deploy or the nightly settlement batch pushed far more events through the payments topic than the consumer group could drain. Lag crossed the alerting threshold and checkout requests that wait on ledger confirmation timed out.",
+      "contributing_factors": [
+        "Alert thresholds did not distinguish this pattern from unrelated latency",
+        "No automated guardrail caught the change before it reached production"
+      ],
+      "prevention": [
+        "Promote RB-014 into the on-call runbook index",
+        "Add a targeted pre-deploy check for this failure mode"
+      ],
+      "time_to_resolve_minutes": 83
+    },
+    {
+      "postmortem_id": "PM-008",
+      "incident_id": "INC-1022",
+      "root_cause_id": "RC-002",
+      "service": "redis-cache",
+      "root_cause": "Redis sentinel failover flap caused connection churn",
+      "detail": "A redis-cache sentinel failover flapped between replicas. Clients reconnected repeatedly, so connection setup cost dominated latency and cache hit rate collapsed.",
+      "contributing_factors": [
+        "Alert thresholds did not distinguish this pattern from unrelated latency",
+        "No automated guardrail caught the change before it reached production"
+      ],
+      "prevention": [
+        "Promote RB-021 into the on-call runbook index",
+        "Add a targeted pre-deploy check for this failure mode"
+      ],
+      "time_to_resolve_minutes": 77
+    }
+  ]
+}

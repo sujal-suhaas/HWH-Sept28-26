@@ -1,0 +1,420 @@
+{
+  "labels": {
+    "INC-1001": {
+      "root_cause_id": "RC-007",
+      "validated_runbook_id": "RB-018",
+      "service": "fraud-scorer",
+      "severity": "p2",
+      "incident_type": "latency",
+      "is_noise": false
+    },
+    "INC-1002": {
+      "root_cause_id": "RC-001",
+      "validated_runbook_id": "RB-014",
+      "service": "kafka-bus",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "is_noise": false
+    },
+    "INC-1003": {
+      "root_cause_id": "RC-004",
+      "validated_runbook_id": "RB-032",
+      "service": "payments-ledger",
+      "severity": "p1",
+      "incident_type": "latency",
+      "is_noise": false
+    },
+    "INC-1004": {
+      "root_cause_id": "RC-002",
+      "validated_runbook_id": "RB-021",
+      "service": "redis-cache",
+      "severity": "p2",
+      "incident_type": "availability",
+      "is_noise": false
+    },
+    "INC-1005": {
+      "root_cause_id": "RC-001",
+      "validated_runbook_id": "RB-014",
+      "service": "kafka-bus",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "is_noise": false
+    },
+    "INC-1006": {
+      "root_cause_id": "RC-007",
+      "validated_runbook_id": "RB-018",
+      "service": "fraud-scorer",
+      "severity": "p2",
+      "incident_type": "latency",
+      "is_noise": false
+    },
+    "INC-1007": {
+      "root_cause_id": null,
+      "validated_runbook_id": null,
+      "service": "fraud-scorer",
+      "severity": "p3",
+      "incident_type": "error_rate",
+      "is_noise": true
+    },
+    "INC-1008": {
+      "root_cause_id": "RC-007",
+      "validated_runbook_id": "RB-018",
+      "service": "fraud-scorer",
+      "severity": "p2",
+      "incident_type": "latency",
+      "is_noise": false
+    },
+    "INC-1009": {
+      "root_cause_id": "RC-006",
+      "validated_runbook_id": "RB-040",
+      "service": "webhook-dispatcher",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "is_noise": false
+    },
+    "INC-1010": {
+      "root_cause_id": "RC-001",
+      "validated_runbook_id": "RB-014",
+      "service": "checkout-api",
+      "severity": "p1",
+      "incident_type": "latency",
+      "is_noise": false
+    },
+    "INC-1011": {
+      "root_cause_id": "RC-001",
+      "validated_runbook_id": "RB-014",
+      "service": "checkout-api",
+      "severity": "p1",
+      "incident_type": "latency",
+      "is_noise": false
+    },
+    "INC-1012": {
+      "root_cause_id": "RC-002",
+      "validated_runbook_id": "RB-021",
+      "service": "redis-cache",
+      "severity": "p2",
+      "incident_type": "availability",
+      "is_noise": false
+    },
+    "INC-1013": {
+      "root_cause_id": "RC-002",
+      "validated_runbook_id": "RB-021",
+      "service": "redis-cache",
+      "severity": "p2",
+      "incident_type": "availability",
+      "is_noise": false
+    },
+    "INC-1014": {
+      "root_cause_id": null,
+      "validated_runbook_id": null,
+      "service": "checkout-api",
+      "severity": "p3",
+      "incident_type": "latency",
+      "is_noise": true
+    },
+    "INC-1015": {
+      "root_cause_id": "RC-004",
+      "validated_runbook_id": "RB-032",
+      "service": "payments-ledger",
+      "severity": "p1",
+      "incident_type": "latency",
+      "is_noise": false
+    },
+    "INC-1016": {
+      "root_cause_id": "RC-007",
+      "validated_runbook_id": "RB-018",
+      "service": "fraud-scorer",
+      "severity": "p2",
+      "incident_type": "latency",
+      "is_noise": false
+    },
+    "INC-1017": {
+      "root_cause_id": "RC-001",
+      "validated_runbook_id": "RB-014",
+      "service": "checkout-api",
+      "severity": "p1",
+      "incident_type": "latency",
+      "is_noise": false
+    },
+    "INC-1018": {
+      "root_cause_id": "RC-004",
+      "validated_runbook_id": "RB-032",
+      "service": "payments-ledger",
+      "severity": "p1",
+      "incident_type": "latency",
+      "is_noise": false
+    },
+    "INC-1019": {
+      "root_cause_id": "RC-007",
+      "validated_runbook_id": "RB-018",
+      "service": "fraud-scorer",
+      "severity": "p2",
+      "incident_type": "latency",
+      "is_noise": false
+    },
+    "INC-1020": {
+      "root_cause_id": "RC-001",
+      "validated_runbook_id": "RB-014",
+      "service": "checkout-api",
+      "severity": "p1",
+      "incident_type": "latency",
+      "is_noise": false
+    },
+    "INC-1021": {
+      "root_cause_id": null,
+      "validated_runbook_id": null,
+      "service": "checkout-api",
+      "severity": "p3",
+      "incident_type": "latency",
+      "is_noise": true
+    },
+    "INC-1022": {
+      "root_cause_id": "RC-002",
+      "validated_runbook_id": "RB-021",
+      "service": "redis-cache",
+      "severity": "p2",
+      "incident_type": "availability",
+      "is_noise": false
+    },
+    "INC-1023": {
+      "root_cause_id": "RC-002",
+      "validated_runbook_id": "RB-021",
+      "service": "redis-cache",
+      "severity": "p2",
+      "incident_type": "availability",
+      "is_noise": false
+    },
+    "INC-1024": {
+      "root_cause_id": "RC-001",
+      "validated_runbook_id": "RB-014",
+      "service": "checkout-api",
+      "severity": "p1",
+      "incident_type": "latency",
+      "is_noise": false
+    },
+    "INC-1025": {
+      "root_cause_id": "RC-001",
+      "validated_runbook_id": "RB-014",
+      "service": "kafka-bus",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "is_noise": false
+    },
+    "INC-1026": {
+      "root_cause_id": "RC-002",
+      "validated_runbook_id": "RB-021",
+      "service": "auth-service",
+      "severity": "p3",
+      "incident_type": "latency",
+      "is_noise": false
+    },
+    "INC-1027": {
+      "root_cause_id": "RC-008",
+      "validated_runbook_id": "RB-025",
+      "service": "redis-cache",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "is_noise": false
+    },
+    "INC-1028": {
+      "root_cause_id": null,
+      "validated_runbook_id": null,
+      "service": "checkout-api",
+      "severity": "p3",
+      "incident_type": "latency",
+      "is_noise": true
+    },
+    "INC-1029": {
+      "root_cause_id": "RC-007",
+      "validated_runbook_id": "RB-018",
+      "service": "fraud-scorer",
+      "severity": "p2",
+      "incident_type": "latency",
+      "is_noise": false
+    },
+    "INC-1030": {
+      "root_cause_id": "RC-001",
+      "validated_runbook_id": "RB-014",
+      "service": "kafka-bus",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "is_noise": false
+    },
+    "INC-1031": {
+      "root_cause_id": "RC-004",
+      "validated_runbook_id": "RB-032",
+      "service": "payments-ledger",
+      "severity": "p1",
+      "incident_type": "latency",
+      "is_noise": false
+    },
+    "INC-1032": {
+      "root_cause_id": "RC-006",
+      "validated_runbook_id": "RB-040",
+      "service": "webhook-dispatcher",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "is_noise": false
+    },
+    "INC-1033": {
+      "root_cause_id": "RC-003",
+      "validated_runbook_id": "RB-007",
+      "service": "auth-service",
+      "severity": "p1",
+      "incident_type": "error_rate",
+      "is_noise": false
+    },
+    "INC-1034": {
+      "root_cause_id": "RC-003",
+      "validated_runbook_id": "RB-007",
+      "service": "auth-service",
+      "severity": "p1",
+      "incident_type": "error_rate",
+      "is_noise": false
+    },
+    "INC-1035": {
+      "root_cause_id": null,
+      "validated_runbook_id": null,
+      "service": "checkout-api",
+      "severity": "p3",
+      "incident_type": "latency",
+      "is_noise": true
+    },
+    "INC-1036": {
+      "root_cause_id": "RC-008",
+      "validated_runbook_id": "RB-025",
+      "service": "redis-cache",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "is_noise": false
+    },
+    "INC-1037": {
+      "root_cause_id": "RC-006",
+      "validated_runbook_id": "RB-040",
+      "service": "webhook-dispatcher",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "is_noise": false
+    },
+    "INC-1038": {
+      "root_cause_id": "RC-001",
+      "validated_runbook_id": "RB-014",
+      "service": "checkout-api",
+      "severity": "p1",
+      "incident_type": "latency",
+      "is_noise": false
+    },
+    "INC-1039": {
+      "root_cause_id": "RC-002",
+      "validated_runbook_id": "RB-021",
+      "service": "auth-service",
+      "severity": "p3",
+      "incident_type": "latency",
+      "is_noise": false
+    },
+    "INC-1040": {
+      "root_cause_id": "RC-004",
+      "validated_runbook_id": "RB-032",
+      "service": "payments-ledger",
+      "severity": "p1",
+      "incident_type": "latency",
+      "is_noise": false
+    },
+    "INC-1041": {
+      "root_cause_id": "RC-003",
+      "validated_runbook_id": "RB-007",
+      "service": "auth-service",
+      "severity": "p1",
+      "incident_type": "error_rate",
+      "is_noise": false
+    },
+    "INC-1042": {
+      "root_cause_id": null,
+      "validated_runbook_id": null,
+      "service": "checkout-api",
+      "severity": "p3",
+      "incident_type": "latency",
+      "is_noise": true
+    },
+    "INC-1043": {
+      "root_cause_id": "RC-002",
+      "validated_runbook_id": "RB-021",
+      "service": "redis-cache",
+      "severity": "p2",
+      "incident_type": "availability",
+      "is_noise": false
+    },
+    "INC-1044": {
+      "root_cause_id": "RC-005",
+      "validated_runbook_id": "RB-005",
+      "service": "checkout-api",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "is_noise": false
+    },
+    "INC-1045": {
+      "root_cause_id": "RC-006",
+      "validated_runbook_id": "RB-040",
+      "service": "webhook-dispatcher",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "is_noise": false
+    },
+    "INC-1046": {
+      "root_cause_id": "RC-001",
+      "validated_runbook_id": "RB-014",
+      "service": "kafka-bus",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "is_noise": false
+    },
+    "INC-1047": {
+      "root_cause_id": "RC-002",
+      "validated_runbook_id": "RB-021",
+      "service": "redis-cache",
+      "severity": "p2",
+      "incident_type": "availability",
+      "is_noise": false
+    },
+    "INC-1048": {
+      "root_cause_id": "RC-006",
+      "validated_runbook_id": "RB-040",
+      "service": "webhook-dispatcher",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "is_noise": false
+    },
+    "INC-1049": {
+      "root_cause_id": null,
+      "validated_runbook_id": null,
+      "service": "fraud-scorer",
+      "severity": "p3",
+      "incident_type": "error_rate",
+      "is_noise": true
+    },
+    "INC-1050": {
+      "root_cause_id": "RC-006",
+      "validated_runbook_id": "RB-040",
+      "service": "webhook-dispatcher",
+      "severity": "p2",
+      "incident_type": "saturation",
+      "is_noise": false
+    },
+    "INC-1051": {
+      "root_cause_id": "RC-003",
+      "validated_runbook_id": "RB-007",
+      "service": "auth-service",
+      "severity": "p1",
+      "incident_type": "error_rate",
+      "is_noise": false
+    },
+    "INC-1052": {
+      "root_cause_id": "RC-003",
+      "validated_runbook_id": "RB-007",
+      "service": "auth-service",
+      "severity": "p1",
+      "incident_type": "error_rate",
+      "is_noise": false
+    }
+  }
+}

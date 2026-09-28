@@ -1,0 +1,68 @@
+{
+  "company": "NimbusPay",
+  "services": [
+    {
+      "name": "checkout-api",
+      "tier": 1,
+      "owner": "Checkout",
+      "dependencies": [
+        "payments-ledger",
+        "fraud-scorer",
+        "redis-cache"
+      ],
+      "slo": "p99 < 800ms"
+    },
+    {
+      "name": "payments-ledger",
+      "tier": 1,
+      "owner": "Money Movement",
+      "dependencies": [
+        "kafka-bus",
+        "redis-cache"
+      ],
+      "slo": "p99 < 500ms"
+    },
+    {
+      "name": "auth-service",
+      "tier": 1,
+      "owner": "Identity",
+      "dependencies": [
+        "redis-cache"
+      ],
+      "slo": "availability > 99.95%"
+    },
+    {
+      "name": "fraud-scorer",
+      "tier": 2,
+      "owner": "Risk",
+      "dependencies": [
+        "kafka-bus"
+      ],
+      "slo": "p99 < 250ms"
+    },
+    {
+      "name": "kafka-bus",
+      "tier": 1,
+      "owner": "Platform",
+      "dependencies": [],
+      "slo": "consumer lag < 5k"
+    },
+    {
+      "name": "redis-cache",
+      "tier": 1,
+      "owner": "Platform",
+      "dependencies": [],
+      "slo": "availability > 99.99%"
+    },
+    {
+      "name": "webhook-dispatcher",
+      "tier": 2,
+      "owner": "Merchant Integrations",
+      "dependencies": [
+        "payments-ledger",
+        "kafka-bus"
+      ],
+      "slo": "delivery success > 99%"
+    }
+  ]
+}

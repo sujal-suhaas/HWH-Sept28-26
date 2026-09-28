@@ -1,0 +1,93 @@
+{
+  "runbooks": [
+    {
+      "id": "RB-005",
+      "title": "Raise checkout-api connection pool and add a ledger circuit breaker",
+      "root_cause_id": "RC-005",
+      "steps": [
+        "Raise DB_POOL_SIZE on checkout-api from 20 to 60 and roll the deployment.",
+        "Enable the ledger circuit breaker so pool waiters fail fast instead of queueing.",
+        "Confirm pool wait time is under 5ms for 10 minutes."
+      ],
+      "verified": true
+    },
+    {
+      "id": "RB-007",
+      "title": "Rotate the internal TLS certificate and reload auth-service",
+      "root_cause_id": "RC-003",
+      "steps": [
+        "Issue the replacement internal certificate from the platform CA.",
+        "Roll auth-service with the new secret; do not restart the edge first.",
+        "Verify handshake error rate returns to zero and add a 21-day expiry alert."
+      ],
+      "verified": true
+    },
+    {
+      "id": "RB-014",
+      "title": "Scale the payments-ledger consumer group and replay the affected partition",
+      "root_cause_id": "RC-001",
+      "steps": [
+        "Scale the payments-ledger consumer group from 4 to 12 members.",
+        "Confirm lag is draining at a sustained rate, not just bouncing.",
+        "Replay the affected partition range for the incident window.",
+        "Verify ledger reconciliation reports zero unmatched entries."
+      ],
+      "verified": true
+    },
+    {
+      "id": "RB-018",
+      "title": "Restore the previous fraud model and warm the inference cache",
+      "root_cause_id": "RC-007",
+      "steps": [
+        "Roll fraud-scorer back to the previous promoted model.",
+        "Warm the inference cache with the last 24h of feature vectors.",
+        "Confirm p99 is back under the 250ms budget before re-promoting anything."
+      ],
+      "verified": true
+    },
+    {
+      "id": "RB-021",
+      "title": "Pin the Redis primary and widen the sentinel failover window",
+      "root_cause_id": "RC-002",
+      "steps": [
+        "Pin redis-cache to the healthy primary and stop the flapping sentinel.",
+        "Raise down-after-milliseconds so a slow replica is not promoted prematurely.",
+        "Drain stale client connections and confirm hit rate recovers."
+      ],
+      "verified": true
+    },
+    {
+      "id": "RB-025",
+      "title": "Enable jittered TTLs and single-flight cache fill",
+      "root_cause_id": "RC-008",
+      "steps": [
+        "Apply TTL jitter so hot keys do not expire together.",
+        "Enable single-flight so only one request rebuilds a missing key.",
+        "Confirm payments-ledger query rate returns to baseline."
+      ],
+      "verified": true
+    },
+    {
+      "id": "RB-032",
+      "title": "Roll payments-ledger back to v1.8.2 and move the ledger write off the request path",
+      "root_cause_id": "RC-004",
+      "steps": [
+        "Roll payments-ledger back to v1.8.2 to stop the bleeding.",
+        "Move the audit write to an async publisher before re-attempting the release.",
+        "Verify checkout p99 is under 800ms for 15 minutes."
+      ],
+      "verified": true
+    },
+    {
+      "id": "RB-040",
+      "title": "Cap webhook retry concurrency and add exponential backoff",
+      "root_cause_id": "RC-006",
+      "steps": [
+        "Cap webhook-dispatcher retry concurrency at 50.",
+        "Enable exponential backoff with jitter on delivery retries.",
+        "Drain the retry queue and confirm ledger latency is unaffected."
+      ],
+      "verified": true
+    }
+  ]
+}
