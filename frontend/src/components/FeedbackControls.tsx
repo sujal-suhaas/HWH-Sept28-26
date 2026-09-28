@@ -102,9 +102,17 @@ export function FeedbackControls({
 
   const spec = SPECS[feedbackType]
   const proposedRunbookId = incident.proposed_resolution?.runbook_id ?? null
+  const proposedRootCauseId = incident.proposed_diagnosis?.root_cause_id ?? null
 
-  // Prefill from what the agent already proposed, and from the runbook's own
-  // root cause. The catalog is the authority for that mapping, so the operator
+  // The agent may name the suspected cause itself. That wins over the runbook's
+  // cause, because it is what the agent actually proposed and it exists even when
+  // no runbook was retrieved. The catalog remains the authority for the id space.
+  useEffect(() => {
+    if (proposedRootCauseId) setRootCauseId((current) => current || proposedRootCauseId)
+  }, [proposedRootCauseId])
+
+  // Otherwise prefill from what the agent already proposed, and from the runbook's
+  // own root cause. The catalog is the authority for that mapping, so the operator
   // is not asked to look up an id the system already knows.
   useEffect(() => {
     if (proposedRunbookId) {

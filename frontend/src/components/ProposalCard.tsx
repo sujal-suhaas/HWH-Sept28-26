@@ -57,11 +57,21 @@ export function ProposalCard({
             confidence: {proposal.confidence}
           </span>
         )}
-        {proposal.runbook_id && (
-          <span className="ml-auto rounded bg-slate-800 px-1.5 py-0.5 font-mono text-xs text-slate-300">
-            {proposal.runbook_id}
-          </span>
-        )}
+        <span className="ml-auto flex items-center gap-1.5">
+          {proposal.root_cause_id && (
+            <span
+              data-testid="proposal-root-cause"
+              className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-xs text-slate-300"
+            >
+              {proposal.root_cause_id}
+            </span>
+          )}
+          {proposal.runbook_id && (
+            <span className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-xs text-slate-300">
+              {proposal.runbook_id}
+            </span>
+          )}
+        </span>
       </header>
 
       <p className="mt-2.5 text-sm leading-relaxed text-slate-200">{proposal.content}</p>

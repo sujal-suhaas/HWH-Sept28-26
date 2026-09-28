@@ -47,6 +47,12 @@
       "name": "cache_stampede",
       "summary": "Redis cache stampede after bulk key eviction",
       "detail": "A memory-pressure eviction dropped a hot key set at once. Every in-flight request rebuilt the same entries concurrently, saturating payments-ledger."
+    },
+    {
+      "id": "RC-009",
+      "name": "signing_key_rotation_without_overlap",
+      "summary": "Webhook signing key rotated with no dual-key overlap window",
+      "detail": "The webhook signing key was rotated and the previous key retired immediately. Deliveries queued before the rotation were signed with the retired key, so every retry failed signature verification and the delivery queue backed up."
     }
   ]
 }

@@ -31,6 +31,9 @@ from tests.api.helpers import CHECKOUT, seed_confirmed_resolution  # noqa: E402
 _MEMORY_ID = re.compile(r"- \[([^\]]+)\]")
 #: The same line annotates the runbook the memory came from, if any.
 _RUNBOOK_ID = re.compile(r"runbook_id=(RB-\d+)")
+# A runbook hit is annotated with the cause it treats, so a model that read the
+# results can name the cause. Memory off means no annotations, so no cause.
+_ROOT_CAUSE_ID = re.compile(r"root_cause_id=(RC-\d+)")
 
 
 class MemoryAwareLLM(FakeLLM):
@@ -61,6 +64,7 @@ class MemoryAwareLLM(FakeLLM):
         seen = "\n".join(results)
         cited = _MEMORY_ID.findall(seen)
         runbooks = _RUNBOOK_ID.findall(seen)
+        causes = _ROOT_CAUSE_ID.findall(seen)
         step = len(results)
 
         if step == 0:
@@ -84,6 +88,7 @@ class MemoryAwareLLM(FakeLLM):
                             else "No prior incident matched, so this is ungrounded."
                         ),
                         "cited_memory_ids": cited,
+                        "suspected_root_cause_id": causes[0] if causes else None,
                     },
                     call_id="call_2",
                 )
