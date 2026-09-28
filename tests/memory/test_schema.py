@@ -52,12 +52,16 @@ def test_document_id_defaults_to_incident_and_event() -> None:
 
 
 def test_runbook_tags_scope_to_runbook_entries() -> None:
-    tags = runbook_tags("checkout-api", "latency")
-    assert tags == [
+    assert runbook_tags("checkout-api") == [
         "event_type:runbook_entry",
         "service:checkout-api",
-        "incident_type:latency",
     ]
+
+
+def test_runbook_tags_do_not_scope_by_incident_type() -> None:
+    """Runbook events never carry an incident_type tag, so scoping by one would match nothing."""
+    assert runbook_tags() == ["event_type:runbook_entry"]
+    assert all("incident_type" not in tag for tag in runbook_tags("checkout-api"))
 
 
 def test_rejected_diagnosis_is_representable_without_becoming_confirmed() -> None:

@@ -144,8 +144,16 @@ def _postmortem_event(
 
 
 def _runbook_event(
-    runbook: dict[str, Any], services: list[str], promoted_at: datetime
+    runbook: dict[str, Any], service: str | None, promoted_at: datetime
 ) -> MemoryEvent:
+    """One event per (runbook, service) pair.
+
+    A runbook validated for several services must carry a tag for each of them,
+    otherwise a lookup scoped to one of those services misses it entirely. This
+    was a real defect: RB-014 is validated for checkout-api and kafka-bus, but
+    only the first service was tagged, so ``lookup_runbook(service="checkout-api")``
+    could never find it.
+    """
     steps = " ".join(f"{index + 1}) {step}" for index, step in enumerate(runbook["steps"]))
     content = (
         f"Validated runbook {runbook['id']} for root cause {runbook['root_cause_id']}: "
@@ -156,11 +164,12 @@ def _runbook_event(
         incident_id=f"RUNBOOK-{runbook['id']}",
         content=content,
         context="validated runbook",
-        service=services[0] if services else None,
+        service=service,
         incident_type=None,
         runbook_id=runbook["id"],
         outcome=Outcome.CONFIRMED,
         timestamp=promoted_at,
+        document_id=f"RUNBOOK-{runbook['id']}:{service or 'global'}:runbook_entry",
     )
 
 
@@ -192,25 +201,26 @@ def build_seed_events(seed_dir: Path = SEED_DIR) -> list[MemoryEvent]:
         for incident in incidents
         if incident["resolution"].get("validated_runbook_id")
     }
-    service_by_runbook: dict[str, list[str]] = {}
+    # A set, not a list: several incidents resolve with the same runbook on the
+    # same service, and each service must produce exactly one runbook event.
+    service_by_runbook: dict[str, set[str]] = {}
     promoted_at_by_runbook: dict[str, datetime] = {}
     for incident in incidents:
         runbook_id = incident["resolution"].get("validated_runbook_id")
         if runbook_id:
-            service_by_runbook.setdefault(runbook_id, []).append(incident["service"])
+            service_by_runbook.setdefault(runbook_id, set()).add(incident["service"])
             opened = datetime.fromisoformat(incident["opened_at"].replace("Z", "+00:00"))
             promoted_at_by_runbook[runbook_id] = max(
                 opened, promoted_at_by_runbook.get(runbook_id, opened)
             )
 
     for runbook in runbooks_payload["runbooks"]:
-        if runbook["id"] in confirmed_runbooks:
+        if runbook["id"] not in confirmed_runbooks:
+            continue
+        services = sorted(service_by_runbook.get(runbook["id"], []))
+        for service in services or [None]:
             events.append(
-                _runbook_event(
-                    runbook,
-                    service_by_runbook.get(runbook["id"], []),
-                    promoted_at_by_runbook[runbook["id"]],
-                )
+                _runbook_event(runbook, service, promoted_at_by_runbook[runbook["id"]])
             )
 
     return events

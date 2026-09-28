@@ -41,7 +41,17 @@ class RecallHit(BaseModel):
 
     @property
     def event_type(self) -> str | None:
-        return self.metadata.get("event_type")
+        """The event type, from metadata or the scoping tag.
+
+        Hindsight's own derived observations carry no metadata, but they do keep
+        the tags of the memory they came from, so the tag is a reliable fallback.
+        """
+        if self.metadata.get("event_type"):
+            return self.metadata["event_type"]
+        for tag in self.tags:
+            if tag.startswith("event_type:"):
+                return tag.split(":", 1)[1]
+        return None
 
     @property
     def runbook_id(self) -> str | None:
@@ -64,6 +74,9 @@ class MemoryStore(Protocol):
     """Storage-agnostic memory operations."""
 
     bank_id: str
+    #: Static mode label for the store: ``on`` or ``off``. Per-call failures are
+    #: reported as ``degraded`` in the trace, not here.
+    mode: str
 
     def create_bank_if_needed(self) -> MemoryTrace: ...
 
@@ -77,6 +90,9 @@ class MemoryStore(Protocol):
         # Our tags express a *scope*, so every supplied tag must match.
         tags_match: str = "all",
         limit: int = 5,
+        #: Override the relevance threshold. Pass 0.0 when the tag scope is exact
+        #: and therefore is itself the relevance signal.
+        min_score: float | None = None,
     ) -> RecallOutcome: ...
 
     def health(self) -> MemoryTrace: ...

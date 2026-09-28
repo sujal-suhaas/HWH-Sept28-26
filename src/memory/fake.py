@@ -45,6 +45,8 @@ class InMemoryMemoryStore:
         self.events: list[MemoryEvent] = []
         self.retain_calls = 0
         self.recall_calls = 0
+        #: Keyword arguments of every recall, so tests can assert on scoping.
+        self.recall_kwargs: list[dict[str, object]] = []
 
     # --- helpers -----------------------------------------------------------
     def _latency(self, started: float) -> float:
@@ -92,9 +94,21 @@ class InMemoryMemoryStore:
         tags: list[str] | None = None,
         tags_match: str = "all",
         limit: int = 5,
+        min_score: float | None = None,
     ) -> RecallOutcome:
         started = utcnow()
         self.recall_calls += 1
+        threshold = self.min_score if min_score is None else min_score
+        self.recall_kwargs.append(
+            {
+                "query": query,
+                "tags": list(tags or []),
+                "tags_match": tags_match,
+                "limit": limit,
+                "min_score": min_score,
+                "threshold": threshold,
+            }
+        )
         if self.fail_recall:
             return RecallOutcome(
                 hits=[],
@@ -129,7 +143,7 @@ class InMemoryMemoryStore:
                     continue
             overlap = query_tokens & _tokens(event.content)
             score = len(overlap) / len(query_tokens) if query_tokens else 0.0
-            if score >= self.min_score:
+            if score >= threshold:
                 scored.append((score, event))
 
         scored.sort(key=lambda pair: pair[0], reverse=True)
@@ -158,7 +172,7 @@ class InMemoryMemoryStore:
                 hit_count=len(hits),
                 query=query,
                 tags=tags or [],
-                min_score=self.min_score,
+                min_score=threshold,
                 no_match=not hits,
             ),
         )

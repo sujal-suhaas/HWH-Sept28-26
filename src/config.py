@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     groq_model_primary: str = "openai/gpt-oss-120b"
     groq_model_fallback: str = "qwen/qwen3.8-27b"
     groq_timeout_seconds: float = 60.0
+    groq_max_retries: int = 2
+    groq_backoff_base_seconds: float = 0.5
+
+    # --- Agent loop ---
+    agent_max_steps: int = 8
 
     # --- Local storage / API ---
     sqlite_path: str = "data/store/dejaops.db"

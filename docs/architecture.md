@@ -52,12 +52,19 @@ Verification basis for everything in the "Hindsight facts" section:
 | --- | --- |
 | `src/config.py` | environment/`.env` configuration, model IDs, memory mode, thresholds |
 | `src/logging_setup.py` | logging with secret redaction (tokens never reach a log line) |
+| `src/contracts.py` | the frozen shared contract: alert, proposal, feedback, incident state |
+| `src/catalog.py` | read-only service / root-cause / runbook catalog from the seed files |
 | `src/memory/interface.py` | `MemoryStore` protocol, `RecallHit`, `RecallOutcome` |
 | `src/memory/schema.py` | durable event types, tag/metadata derivation |
 | `src/memory/trace.py` | `MemoryTrace`, `TraceLog`, provider-trace sanitisation |
-| `src/memory/hindsight_client.py` | **the only Hindsight importer**; retry, degrade, normalise |
+| `src/memory/hindsight_client.py` | **the only Hindsight importer**; retry, degrade, normalise, dedupe |
 | `src/memory/disabled.py` | memory-OFF store; performs no network calls |
 | `src/memory/fake.py` | in-memory store for tests and offline development |
+| `src/agent/prompts.py` | system prompt and message rendering (identical across memory modes) |
+| `src/agent/tools.py` | tool specs, argument validation, grounding guards, handlers |
+| `src/agent/groq_client.py` | Groq client: bounded retry, model fallback, error taxonomy |
+| `src/agent/loop.py` | the bounded agent loop and its honest failure paths |
+| `src/agent/trace.py` | `AgentRun`, `ModelCall`, `ToolCall` records |
 | `src/api/app.py`, `routes.py` | HTTP surface, lifespan, CORS, trace ring buffer |
 | `scripts/generate_data.py` | deterministic NimbusPay dataset + hidden eval labels |
 | `scripts/seed_memory.py` | idempotent seeding of the Memory Bank |
@@ -144,6 +151,56 @@ After a retain, Hindsight consolidates facts into **observations** — derived n
 inherited tags but may have no `metadata`. Recall therefore returns a mix of raw facts and
 observations. The adapter treats both as legitimate hits and does not assume `metadata` is present.
 
+Because each retained document comes back **twice** — once as the document (`type="world"`, with
+`document_id` and our metadata) and once as its own paraphrase (`type="observation"`, no metadata)
+— the adapter deduplicates on `(incident id, event type)`, preferring the copy that carries
+provenance. Without this, every memory was presented to the model twice and half the citations
+pointed at ids with no `incident_id`.
+
+Runbook memories are keyed by their runbook id rather than their synthetic `RUNBOOK-<id>` incident
+id, because resolution memories also mention a runbook id in their text and the two must not
+collapse into one another.
+
+`event_type` is resolved from `metadata` first and from the `event_type:` tag second, so an
+observation with no metadata still reports the event type it came from.
+
+### 2.5a A similarity threshold is wrong for an exact tag scope
+
+`min_scores` is a relevance gate, and it is only meaningful when the scope is broad. When the tags
+themselves are the relevance signal — "every runbook validated for `checkout-api`" — the gate is a
+bug. Measured: `RB-014` is the only runbook validated for `checkout-api`, and it scores **0.0**
+against the query `checkout-api latency`, so the default threshold hid it completely and
+`lookup_runbook` always reported no match.
+
+`MemoryStore.recall` therefore takes an optional `min_score` override. `lookup_runbook` passes
+`0.0` **only when a service narrows the scope**; without a service the scope is the whole runbook
+set and the threshold stays on, so an unrelated runbook is never presented as relevant. When
+unscoped runbooks do come back, the tool says so in its result.
+
+### 2.5b A long query hides outcome memories
+
+Outcome memories are one short sentence ("Incident INC-1038 involving checkout-api latency was
+resolved by scaling the payments-ledger consumer group…"). A long symptom narrative dilutes their
+similarity score below the threshold. Measured on the seeded bank, same tag scope, same
+resolution memory:
+
+| query | top `final` score |
+| --- | --- |
+| 40-word symptom narrative | 0.057 |
+| 12-word symptom | 0.37 |
+| `checkout-api` + 12-word symptom | 1.05 |
+| `checkout-api latency` | 1.07 |
+
+The agent therefore issues **two scoped recalls** instead of one broad one: the full narrative
+against `event_type:incident_open` (narrative matches narrative), and a short service-anchored
+query against `event_type:resolution` (outcome matches outcome). A single service-scoped recall
+ranked near-duplicate `INCIDENT_OPEN` memories above every resolution and postmortem, so the
+memories that actually carry an outcome never reached the model.
+
+A runbook lookup is scoped by `event_type:runbook_entry` and **never** by `incident_type`.
+`RUNBOOK_ENTRY` events are keyed by root cause and service; adding an incident type made every
+runbook lookup return nothing. A test asserts this.
+
 ### 2.6 The sync client cannot run inside an event loop
 
 The Hindsight SDK is synchronous and fails with `This event loop is already running` if called from
@@ -178,7 +235,61 @@ authoritative event types above. There is no code path by which a hallucinated
 
 ---
 
-## 4. Retry and degradation
+## 5. The agent loop
+
+`src/agent/loop.py` is bounded and defensive by construction:
+
+- at most `AGENT_MAX_STEPS` model turns (default **8**; measured, the primary model issues roughly
+  one tool call per turn, so investigate → diagnose → propose needs about six);
+- every tool call is validated before it executes;
+- a malformed call gets **exactly one** repair, then the run ends with an honest error;
+- a retryable model failure falls back once, and a total failure ends the run with an error rather
+  than a fabricated answer;
+- the loop stops as soon as the model replies without tool calls.
+
+### 5.1 Tool-call validation
+
+Model output is untrusted input. Before any handler runs, a call must pass, in order:
+
+1. the tool name is in the allowlist (`recall_similar_incidents`, `lookup_runbook`,
+   `get_service_map`, `propose_diagnosis`, `propose_resolution`);
+2. the arguments parse as a JSON object;
+3. required fields are present and correctly typed (Pydantic models per tool);
+4. enum values are valid;
+5. `cited_memory_ids` is a subset of the memory ids **actually returned by a tool in this run**;
+6. a proposed `runbook_id` exists in the catalog;
+7. a resolution is not proposed before a diagnosis.
+
+Rules 5–7 are the anti-hallucination guards. Rule 5 is what makes the Grounded Response Rate
+metric meaningful rather than self-reported: a citation the model invented cannot survive validation.
+
+On failure the errors are fed back as the tool result, the model may correct itself once, and a
+second failure ends the run as `tool_call_invalid`. Repairs are counted **per tool name**, so a
+model cannot loop by alternating between two broken calls.
+
+### 5.2 Model fallback
+
+| Failure | Behaviour |
+| --- | --- |
+| 429, 5xx, timeout, connection | bounded exponential backoff, then the fallback model |
+| 400 / 422 | never retried; fails clearly |
+| 401 / 403 | never retried; fails clearly |
+| 404 (model gone) | never retried; fails clearly, and **does not** silently fall back |
+
+A decommissioned primary model is a configuration failure, not something to paper over with a
+different model — a silent swap would change what the demo actually ran on. `verify_models()`
+checks both configured models against the provider at startup and fails loudly if either is gone.
+
+### 5.3 What is never shown
+
+The UI and the traces carry concise evidence, tool results, memory ids, and outcome summaries.
+`Proposal.evidence_summary` is capped at two sentences by the prompt and by validation. Model
+chain-of-thought is never requested, stored, or displayed; only token counts from the provider's
+usage block are retained.
+
+---
+
+## 6. Retry and degradation
 
 | Failure | Behaviour |
 | --- | --- |
@@ -203,7 +314,7 @@ never reach the UI or a log.
 
 ---
 
-## 5. Memory ON vs OFF
+## 7. Memory ON vs OFF
 
 `MEMORY_MODE=off` builds a `DisabledMemoryStore` that makes **no Hindsight calls at all** — it does
 not merely skip the prompt context. Every call it answers returns `mode=off` and
@@ -216,7 +327,7 @@ the comparison causally meaningful.
 
 ---
 
-## 6. Dataset design
+## 8. Dataset design
 
 `scripts/generate_data.py` is deterministic for a given `--seed` (default `1337`) and produces:
 
@@ -241,7 +352,7 @@ confirmed, and that no unconfirmed incident carries a validated runbook.
 
 ---
 
-## 7. Seeding
+## 9. Seeding
 
 `scripts/seed_memory.py` builds 144 durable events from the seed files
 (52 `INCIDENT_OPEN`, 52 `DIAGNOSIS`, 26 `RESOLUTION`, 8 `POSTMORTEM`, 6 `RUNBOOK_ENTRY`) and retains
