@@ -389,8 +389,8 @@ confirmed, and that no unconfirmed incident carries a validated runbook.
 
 ## 9. Seeding
 
-`scripts/seed_memory.py` builds 144 durable events from the seed files
-(52 `INCIDENT_OPEN`, 52 `DIAGNOSIS`, 26 `RESOLUTION`, 8 `POSTMORTEM`, 6 `RUNBOOK_ENTRY`) and retains
+`scripts/seed_memory.py` builds 145 durable events from the seed files
+(52 `INCIDENT_OPEN`, 52 `DIAGNOSIS`, 26 `RESOLUTION`, 8 `POSTMORTEM`, 7 `RUNBOOK_ENTRY`) and retains
 them into the dedicated `dejaops-prod` Memory Bank.
 
 - Idempotent: retained `document_id`s are recorded in `data/store/seed_state.json` and skipped on
@@ -402,3 +402,98 @@ them into the dedicated `dejaops-prod` Memory Bank.
   starting untaught.
 
 `data/store/` is gitignored — SQLite and the seed state file are runtime state, not source.
+
+---
+
+## 10. Learning evaluation
+
+`scripts/evaluate_learning.py` measures the four metrics in AGENTS.md section 5 against the hidden
+labels. The metrics are defined here, once, so that "the agent got better" is a number rather than
+an impression.
+
+### 10.1 Root Cause Hit@1 needs a checkable diagnosis
+
+A hit requires the agent's first diagnosis to name the labeled root cause. That is only measurable
+if the diagnosis carries a cause **id**, so `propose_diagnosis` gained an optional
+`suspected_root_cause_id`, validated against the catalog exactly like `runbook_id` (an id outside
+the catalog is a validation error and goes down the repair path).
+
+The model can only name a cause it has been shown, so the vocabulary reaches it two ways:
+`get_service_map` with no argument returns the root cause catalog, and every runbook hit is
+annotated with the `root_cause_id` that runbook treats. The field is optional: an honest "nothing
+in the evidence singles one out" stays available, and it is scored as a miss rather than a guess.
+
+### 10.2 The curve cannot see its own answer
+
+`curve` mode evaluates occurrence *N* of a pattern having seeded a bank with only occurrences
+`<= N-1` of every pattern. The evaluated incident is never in the bank, so a score at cutoff K
+measures what K occurrences of history actually buy.
+
+This is the property the tests exist for, and it caught a real leak. The first implementation kept
+an event when `event.incident_id` was known **or** `event.runbook_id` was validated by a known
+incident. An incident's own `RESOLUTION` event also carries `runbook_id`, so at every cutoff the
+evaluated incident's own resolution was seeded into the bank it was being asked about — which would
+have inflated every score at cutoff 3 and above. The runbook branch now matches `RUNBOOK_ENTRY`
+events only.
+
+The measured effect of the fix, on the real seed:
+
+| cutoff K | events seeded | resolutions | runbook entries |
+| --- | --- | --- | --- |
+| 2 | 52 | 0 | 0 |
+| 3 | 84 | 7 | 7 |
+| 4 | 108 | 14 | 7 |
+| 5 | 130 | 21 | 7 |
+| 6 | 142 | 25 | 7 |
+
+Cutoff 2 holds no validated fix at all, which is what makes it the interesting first point: the
+agent has history, but no precedent for a fix.
+
+### 10.3 Grounded means grounded in provenance
+
+Grounded Response Rate does not take the model's word for it. A citation counts as supporting when
+the memory's own provenance — read back out of the tool results, not from the run's flat id list —
+points at the labeled validated runbook, or at a *different* incident whose hidden label has the
+same root cause. An incident's own alert memory never counts as evidence for its own diagnosis.
+
+### 10.4 Incomplete is not wrong
+
+A run that never produced an answer — a rate limit, a provider rejection, step exhaustion — is
+recorded as incomplete and **excluded from the Hit@1 denominators**. Scoring a rate limit as a
+wrong diagnosis would understate the agent and would not reproduce.
+
+For the same reason incomplete records are **not cache hits**. An earlier version cached them, which
+made a transient failure permanent: re-running would skip the incident and the curve would stay
+empty forever. Completed records are cached; incomplete ones are re-attempted on the next
+invocation, and stay in the file as evidence.
+
+### 10.5 What a full run costs
+
+Measured on the Groq free tier: one incident costs roughly 20k tokens across its tool-call turns,
+and the free tier allows 200k tokens per day for `openai/gpt-oss-120b`. The full curve is 26
+evaluated incidents, so **it cannot complete in one day on the free tier** — it needs a paid tier,
+or several days of resuming. `--limit`, `--cutoff` and `--pace` exist for that, and the JSONL cache
+makes each day additive rather than restarting.
+
+This is a constraint on the measurement, not a result. No curve numbers are recorded here until a
+run produces them.
+
+### 10.6 A finding the evaluation surfaced: the fallback cannot reliably call tools
+
+`qwen/qwen3.8-27b` is configured as the fallback and was chosen because it advertises tool use.
+Driven through a multi-turn tool loop it repeatedly emits its own XML tool syntax
+(`<tool_call><function=...>`) instead of the OpenAI function-call shape, which Groq rejects with
+`400 tool_use_failed`. The arguments in the rejected output were correct — the serialization is
+what fails.
+
+Consequences, stated plainly:
+
+- the primary model's failures still fall back, but the fallback often cannot complete a tool loop,
+  so a fallback run frequently ends in an honest `AllModelsFailedError` rather than a worse answer
+- `tool_choice="auto"` is already set, so this is not a missing request parameter
+- the classification is unchanged. `tool_use_failed` is a 400 and is treated as permanent. Retrying
+  a stochastic formatting failure *might* help, but that is a hypothesis, and it will not be
+  written down as a fix until it is measured.
+
+The failure is honest either way: the run reports `model_failed`, the timeline says so, and no
+fabricated diagnosis is produced.
