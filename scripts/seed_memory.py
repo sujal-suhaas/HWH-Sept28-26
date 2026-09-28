@@ -218,6 +218,23 @@ def _summarize(events: list[MemoryEvent]) -> dict[str, int]:
     return counts
 
 
+def completed_document_ids(state: dict[str, Any], bank_id: str) -> set[str]:
+    """Documents this state file proves were already retained in *this* bank.
+
+    State written for a different bank is not evidence about this one. Getting
+    this wrong is silent: after a bank switch the seeder would skip everything,
+    report success, and leave the new bank empty.
+    """
+    if state.get("bank_id") != bank_id:
+        return set()
+    return {str(doc) for doc in state.get("document_ids", [])}
+
+
+def pending_events(events: list[MemoryEvent], done: set[str]) -> list[MemoryEvent]:
+    """The events not yet retained, so re-running the seeder is a no-op."""
+    return [event for event in events if event.document_id_or_default() not in done]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Seed the Hindsight memory bank with NimbusPay history."
@@ -278,19 +295,13 @@ def main() -> int:
             return 1
 
         state = {} if args.reset else _load_state(args.state)
-        if state.get("bank_id") == store.bank_id:
-            done: set[str] = set(state.get("document_ids", []))
-        else:
-            done = set()
+        done = completed_document_ids(state, store.bank_id)
 
         retained = 0
-        skipped = 0
+        skipped = len(events) - len(pending_events(events, done))
         failed = 0
-        for event in events:
+        for event in pending_events(events, done):
             document_id = event.document_id_or_default()
-            if document_id in done:
-                skipped += 1
-                continue
             trace = store.retain(event)
             if trace.success:
                 done.add(document_id)

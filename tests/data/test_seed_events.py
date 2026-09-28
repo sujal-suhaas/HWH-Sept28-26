@@ -5,7 +5,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from scripts.seed_memory import build_seed_events
+from scripts.seed_memory import (
+    build_seed_events,
+    completed_document_ids,
+    pending_events,
+)
 from src.memory.schema import EventType, Outcome
 
 SEED_DIR = Path("data/seed")
@@ -134,3 +138,59 @@ def test_every_resolution_runbook_has_a_matching_service_scoped_runbook_event() 
         if event.event_type is not EventType.RESOLUTION or not event.runbook_id:
             continue
         assert (event.runbook_id, event.service) in tagged
+
+
+# --- §13: duplicate seeding is idempotent, and never silently a no-op ----------
+
+
+def test_a_completed_seed_leaves_nothing_pending() -> None:
+    """Re-running the seeder against its own state must retain nothing."""
+    events = build_seed_events()
+    done = {event.document_id_or_default() for event in events}
+
+    assert pending_events(events, done) == []
+
+
+def test_state_from_another_bank_does_not_mark_documents_done() -> None:
+    """A bank switch must reseed, not skip everything and report success.
+
+    This is the silent failure: the old state file names every document, so
+    trusting it would leave the new bank empty while the run looked clean.
+    """
+    events = build_seed_events()
+    foreign = {
+        "bank_id": "some-other-bank",
+        "document_ids": [event.document_id_or_default() for event in events],
+    }
+
+    done = completed_document_ids(foreign, "dejaops-prod")
+
+    assert done == set()
+    assert len(pending_events(events, done)) == len(events)
+
+
+def test_state_from_this_bank_does_mark_documents_done() -> None:
+    events = build_seed_events()
+    mine = {
+        "bank_id": "dejaops-prod",
+        "document_ids": [event.document_id_or_default() for event in events],
+    }
+
+    assert len(completed_document_ids(mine, "dejaops-prod")) == len(events)
+
+
+def test_a_partial_seed_resumes_at_the_unretained_events() -> None:
+    """A run that died halfway must continue, not start over."""
+    events = build_seed_events()
+    first_five = {event.document_id_or_default() for event in events[:5]}
+
+    pending = pending_events(events, first_five)
+
+    assert len(pending) == len(events) - 5
+    assert pending[0] == events[5]
+
+
+def test_state_with_no_document_ids_is_treated_as_empty() -> None:
+    """An older or truncated state file must not crash the seeder."""
+    assert completed_document_ids({"bank_id": "dejaops-prod"}, "dejaops-prod") == set()
+    assert completed_document_ids({}, "dejaops-prod") == set()
