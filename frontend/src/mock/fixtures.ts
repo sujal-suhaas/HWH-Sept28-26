@@ -9,7 +9,7 @@
  * unavailable, memory off, and retained.
  */
 
-import type { IncidentResponse, MemoryTrace } from '../types'
+import type { AlertPayload, IncidentResponse, MemoryTrace } from '../types'
 
 const DAY = '2026-09-22'
 const at = (time: string) => `${DAY}T${time}:00Z`
@@ -292,6 +292,41 @@ export const MOCK_INCIDENTS: IncidentResponse[] = [
  * A trace is `finished_at` plus the latency it reports; deriving `started_at`
  * keeps the two consistent instead of hand-writing timestamps that can drift.
  */
+/**
+ * The alerts the UI can send to `POST /alerts`.
+ *
+ * Reused from the fixtures rather than duplicated, so the alert a live run is
+ * given and the mock incident that describes it stay the same NimbusPay story.
+ * Each one is a plain `AlertPayload`: an alert is an input, not a memory.
+ */
+export const DEMO_ALERTS = MOCK_INCIDENTS.map((incident) => incident.alert)
+
+/**
+ * A novel alert: no incident like it exists in the seeded history.
+ *
+ * This is the teach-then-replay scenario. First run recalls nothing; after an
+ * operator confirms the cause and fix, the same alert should recall them.
+ */
+export const NOVEL_ALERT: AlertPayload = {
+  service: 'webhook-dispatcher',
+  severity: 'p1',
+  incident_type: 'data_corruption',
+  title: 'webhook signature verification failing for in-flight deliveries',
+  summary:
+    'webhook-dispatcher delivery failure rate 38%. Every failure is a signature verification error, and only for deliveries queued before the key rotation.',
+  source: 'pagerduty-sim',
+  environment: 'prod',
+  fired_at: '2026-09-21T15:00:00Z',
+  error_samples: [
+    'webhook_signature_verification_failed_total 18420',
+    'ERROR SignatureMismatch: payload signature does not match any active key',
+    'webhook_delivery_failure_rate 0.38',
+  ],
+}
+
+/** Everything the composer can send, novel scenario first. */
+export const SENDABLE_ALERTS: AlertPayload[] = [NOVEL_ALERT, ...DEMO_ALERTS]
+
 const times = (endedAt: string, latencyMs: number) => {
   const finished = new Date(endedAt)
   return {

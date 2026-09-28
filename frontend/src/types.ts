@@ -128,6 +128,78 @@ export interface FeedbackRequest {
   validated_runbook_id?: string | null
 }
 
+/** Body of `POST /alerts`. `memory_mode` overrides the deployment default. */
+export interface OpenIncidentRequest {
+  alert: AlertPayload
+  memory_mode?: MemoryMode | null
+}
+
+/** Body of `POST /chat/{incident_id}`. */
+export interface ChatRequest {
+  message: string
+  operator: string
+}
+
+/**
+ * An error the backend reported deliberately.
+ *
+ * FastAPI's own validation failures use `detail` as a list of `{loc, msg}`; our
+ * handlers use it as a string. Both reach the operator, so both are flattened
+ * into one message rather than shown as "422".
+ */
+export interface ApiErrorBody {
+  detail: string | Array<{ loc?: Array<string | number>; msg?: string; type?: string }>
+  context?: Record<string, unknown> | null
+}
+
+// ---------------------------------------------------------------------------
+// Catalog
+// ---------------------------------------------------------------------------
+
+export interface CatalogService {
+  name: string
+  tier: number
+  owner: string
+  dependencies: string[]
+  slo: string
+}
+
+export interface CatalogRootCause {
+  id: string
+  name: string
+  summary: string
+  detail: string
+}
+
+export interface CatalogRunbook {
+  id: string
+  title: string
+  /** Every runbook names its cause, which is how the UI can prefill it. */
+  root_cause_id: string
+  steps: string[]
+  verified: boolean
+}
+
+export interface CatalogResponse {
+  company: string
+  services: CatalogService[]
+  root_causes: CatalogRootCause[]
+  runbooks: CatalogRunbook[]
+}
+
+/**
+ * `GET /incidents/{id}/memory-trace`.
+ *
+ * The envelope's `memory_mode` is the *incident's* mode, so an empty `traces`
+ * list can be read as "memory was off" rather than "nothing happened".
+ */
+export interface IncidentMemoryTraceResponse {
+  incident_id: string
+  memory_mode: MemoryMode
+  count: number
+  traces: MemoryTrace[]
+}
+
 // ---------------------------------------------------------------------------
 // System / memory
 // ---------------------------------------------------------------------------

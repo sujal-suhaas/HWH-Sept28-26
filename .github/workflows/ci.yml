@@ -82,3 +82,37 @@ jobs:
         if: steps.detect.outputs.present == 'true'
         working-directory: frontend
         run: npm run build
+
+  e2e:
+    name: Playwright happy path
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install Python dependencies
+        run: uv sync --frozen
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+      # The harness replaces the model and the memory provider with fakes, so no
+      # API keys are needed and the run is reproducible.
+      - name: Install Chromium
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: Happy path
+        working-directory: frontend
+        run: npx playwright test
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7
