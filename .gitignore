@@ -1,5 +1,42 @@
-
+# Secrets - never commit
 .env
-.env*
+.env.*
+!.env.example
 
+# Serena / editor
 .serena/
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Runtime state (SQLite is the transactional source of truth, not versioned)
+data/store/
+*.db
+*.db-journal
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/coverage/
+*.tsbuildinfo
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+# OS
+.DS_Store
+Thumbs.db
