@@ -104,6 +104,10 @@ class FakeLLM:
     def calls_made(self) -> int:
         return len(self.seen_messages)
 
+    def close(self) -> None:
+        """Match the real client's interface; the app closes it at shutdown."""
+        return None
+
     def messages_of(self, index: int) -> list[dict[str, Any]]:
         return self.seen_messages[index]
 

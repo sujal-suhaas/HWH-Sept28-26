@@ -88,6 +88,33 @@ class AlertPayload(BaseModel):
         return stripped
 
 
+class OpenIncidentRequest(BaseModel):
+    """Body of ``POST /alerts``.
+
+    ``memory_mode`` is a per-request override of the deployment default. The
+    memory ON/OFF comparison requires the *same* alert run both ways, which is
+    not possible if switching modes means restarting the service.
+    """
+
+    alert: AlertPayload
+    memory_mode: MemoryModeName | None = None
+
+
+class ChatRequest(BaseModel):
+    """Body of ``POST /chat/{incident_id}``."""
+
+    message: str = Field(min_length=1, max_length=2000)
+    operator: str = Field(default="operator", min_length=1, max_length=120)
+
+    @field_validator("message", "operator")
+    @classmethod
+    def _strip(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("must not be blank")
+        return stripped
+
+
 class Proposal(BaseModel):
     """A model proposal. Never authoritative memory."""
 
