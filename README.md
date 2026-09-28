@@ -236,7 +236,10 @@ Phase 0–5:
 - [x] Playwright happy path
 - [x] Learning evaluation with measured results — one pattern ladder and one teach replay, both on
       the primary model. See [`docs/architecture.md`](docs/architecture.md) §10.7
-- [ ] Screenshots from a live run
+- [ ] Screenshots from a live run. Attempted; blocked on the free tier (the primary had 1,844 of
+      200,000 daily tokens left, and the fallback rejects the request size — issue #25). Harness
+      captures with a fake model were deleted rather than shipped, because a README image of a fake
+      model pretending to be the product is worse than no image.
 
 See [`docs/architecture.md`](docs/architecture.md) for the verified Hindsight
 behaviour this design depends on, and why each decision was made. §10.8 records

@@ -127,11 +127,24 @@ That is how the cause id becomes retrievable, and it is why the runbook is in th
 
 > The operator just wrote the first memory about this failure mode. Watch what changes.
 
-Re-run the identical alert. The agent should recall the taught outcome, name the same cause, and
-propose the same fix.
+Re-run the identical alert. This is the measured result, not a hope — on the shipped primary
+model, the same alert, same prompt, same bank lifecycle:
+
+| | before teach | after teach |
+| --- | --- | --- |
+| named root cause | `None` | **`RC-009`** |
+| Root Cause Hit@1 | `False` | **`True`** |
+| Validated Fix Hit@1 | `False` | **`True`** |
+| grounded response | `False` | **`True`** |
+| cited memories | 0 | 2 |
 
 > That is the whole thesis. The system did not get better because we retrained anything. It got
 > better because a confirmed outcome became durable memory that the next incident can recall.
+
+If it does **not** name `RC-009`, that is still the honest demo — say so and move on rather than
+asserting the table. The failure to check for is the one that hid here for a while: the agent
+retrieving the fix, citing it correctly, and never naming the cause. If you see that, the tool
+result is missing `root_cause_id=` on the recalled hit; `docs/architecture.md` §10.8 explains it.
 
 ---
 
@@ -144,21 +157,29 @@ These came from actual runs. Reproduce any of them with the command shown.
 | 145 durable events across 52 incidents | `retained=145 skipped=0 failed=0` | `uv run python scripts/seed_memory.py --dry-run` |
 | Memory ON cites real memories; OFF cites none | ON: confidence `high`, 2 cited, `RB-014`, 8 traces. OFF: `low`, 0 cited, no resolution, 0 traces | the two runs above |
 | An operator confirmation is what writes memory | three retains landed on confirm (`DIAGNOSIS`, `RESOLUTION`, `RUNBOOK_ENTRY`), and `INC-9001:resolution` and `RUNBOOK-RB-014:checkout-api:runbook_entry` read back out of the bank afterwards | `uv run python scripts/seed_memory.py` then the feedback flow |
-| The agent can name a root cause | named `RC-007` correctly in a live run | `docs/architecture.md` §10.7 |
+| **Teach → replay works on the demo incident** | Root Cause Hit@1 `False → True`, gain **+1**; named `RC-009`; 2 memories cited | `uv run python scripts/evaluate_learning.py --mode teach` |
+| **The curve rises with confirmed history** | RC-007 ladder, cutoffs 2–5: cause@1 `0.00 → 1.00 → 1.00 → 1.00`, fix@1 `0.00 → 0.00 → 1.00 → 1.00` | `uv run python scripts/evaluate_learning.py --mode curve --limit 4` |
+| The agent can name a root cause | named `RC-007` and `RC-009` correctly in live runs | `docs/architecture.md` §10.7 |
 | The demo's ground truth is catalogued but unseeded | `RC-009` and `RB-051` are in the catalog; 0 memories reference either, at every history cutoff including the full bank | `uv run pytest tests/data/test_demo_scenario.py -v` |
+| Both runs used the shipped primary model | `fallback_runs: 0`, `models_used: ["openai/gpt-oss-120b"]` | the `--json` output of either command |
 
-**Not measured yet, and not to be claimed:**
+**The caveats, which belong in the same breath as the numbers:**
 
-- **the teach-then-replay result.** The *mechanism* is tested end to end without a model
-  (`tests/api/test_teach_replay.py`: the teach writes the right memories, they are scoped so recall
-  finds them, and the recalled runbook is annotated `root_cause_id=RC-009`). The *live* replay was
-  attempted and both runs ended in `model_failed` — the primary was rate-limited and the fallback's
-  tool call was rejected by the provider. Do not say the agent names `RC-009` after the teach until
-  a live run shows it.
-- **the full learning curve.** The first partial run is in `docs/architecture.md` §10.7 — two of
-  four runs produced an answer, both at the easy end, both on the fallback model. Two perfect
-  scores at the easy end are not a curve.
-- any latency or accuracy improvement figure beyond what is in that table.
+- **The curve is `n = 1` per cutoff, one pattern of six.** Four runs, each a different incident,
+  so the steps between cutoffs are not a controlled comparison. It illustrates the mechanism —
+  later occurrences become diagnosable because confirmed outcomes accumulated. It is not a rate.
+  No target was set in advance and none is reported.
+- **A full six-pattern curve has not been run.** 26 incidents at ~20k tokens each against a 200k
+  daily free-tier limit; `docs/architecture.md` §10.5. Do not present the ladder above as "the
+  learning curve" without saying it is one pattern.
+- **No latency or accuracy improvement figure exists** beyond what is in these tables.
+
+**Not measured at all:** screenshots in the README come from a live run and are still outstanding. The
+captures that exist were taken against the E2E harness with a fake model, and putting those in a
+README would misrepresent the product, so they were deleted rather than shipped. A live capture was
+attempted and both runs ended in `AllModelsFailedError` — the primary had 1,844 of its 200,000 daily
+tokens left, and the fallback rejects the request size outright (`OTPM: Limit 1000, Requested 1502`,
+issue #25). Re-run the capture once quota allows; do not substitute harness images for live ones.
 
 ---
 
