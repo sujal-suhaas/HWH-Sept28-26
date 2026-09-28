@@ -250,6 +250,49 @@ def test_grounding_does_not_restrict_read_tools(memory, catalog) -> None:
     assert validate_grounding("recall_similar_incidents", args, ctx) == []
 
 
+def test_invented_root_cause_id_is_rejected(memory, catalog) -> None:
+    ctx = _ctx(memory, catalog)
+    args = ProposeDiagnosisArgs(
+        hypothesis="lag",
+        confidence="high",
+        evidence_summary="e",
+        suspected_root_cause_id="RC-9999",
+    )
+    errors = validate_grounding("propose_diagnosis", args, ctx)
+    assert any("RC-9999" in error for error in errors)
+
+
+def test_real_root_cause_id_is_accepted(memory, catalog) -> None:
+    ctx = _ctx(memory, catalog)
+    args = ProposeDiagnosisArgs(
+        hypothesis="lag",
+        confidence="high",
+        evidence_summary="e",
+        suspected_root_cause_id="RC-014",
+    )
+    assert validate_grounding("propose_diagnosis", args, ctx) == []
+
+
+def test_omitting_the_root_cause_id_is_allowed(memory, catalog) -> None:
+    """Naming a cause is optional: an honest 'not sure' must stay available."""
+    ctx = _ctx(memory, catalog)
+    args = ProposeDiagnosisArgs(hypothesis="lag", confidence="low", evidence_summary="e")
+    assert args.suspected_root_cause_id is None
+    assert validate_grounding("propose_diagnosis", args, ctx) == []
+
+
+def test_a_root_cause_id_is_not_validated_against_the_runbook_catalog(memory, catalog) -> None:
+    """A runbook id passed as a cause must fail: they are different id spaces."""
+    ctx = _ctx(memory, catalog)
+    args = ProposeDiagnosisArgs(
+        hypothesis="lag",
+        confidence="high",
+        evidence_summary="e",
+        suspected_root_cause_id="RB-014",
+    )
+    assert validate_grounding("propose_diagnosis", args, ctx) != []
+
+
 # --------------------------------------------------------------------------
 # Handlers
 # --------------------------------------------------------------------------
@@ -536,6 +579,28 @@ def test_get_service_map_lists_the_estate(memory, catalog) -> None:
     assert len(outcome.data["services"]) == len(catalog.services)
 
 
+def test_get_service_map_hands_the_model_the_root_cause_vocabulary(memory, catalog) -> None:
+    """The model can only name a cause it has been shown. Ids must reach it here."""
+    ctx = _ctx(memory, catalog)
+    outcome = execute_tool_call("get_service_map", GetServiceMapArgs(), ctx)
+    ids = {item["id"] for item in outcome.data["root_causes"]}
+    assert ids == {rc.id for rc in catalog.root_causes}
+    assert ids, "the catalog must carry root causes or the diagnosis cannot be checked"
+
+
+def test_a_runbook_hit_is_annotated_with_the_cause_it_treats(memory_with_history, catalog) -> None:
+    """A runbook treats one cause; the model sees the fix, so it needs the cause."""
+    ctx = _ctx(memory_with_history, catalog)
+    outcome = execute_tool_call(
+        "lookup_runbook",
+        LookupRunbookArgs(
+            suspected_cause="Kafka consumer lag on the payments topic", service="checkout-api"
+        ),
+        ctx,
+    )
+    assert "root_cause_id=RC-014" in outcome.summary
+
+
 # --------------------------------------------------------------------------
 # Proposal tools: the critical safety property
 # --------------------------------------------------------------------------
@@ -573,8 +638,27 @@ def test_propose_diagnosis_is_marked_proposed(memory, catalog) -> None:
     assert ctx.diagnosis is not None
     assert ctx.diagnosis.status == "proposed"
     assert ctx.diagnosis.kind == "diagnosis"
+    assert ctx.diagnosis.root_cause_id is None
     assert "awaiting operator confirmation" in outcome.summary
     assert "not confirmed" in outcome.summary
+
+
+def test_propose_diagnosis_carries_the_named_root_cause(memory, catalog) -> None:
+    """The evaluation compares this field against the hidden label, so it must round-trip."""
+    ctx = _ctx(memory, catalog)
+    outcome = execute_tool_call(
+        "propose_diagnosis",
+        ProposeDiagnosisArgs(
+            hypothesis="lag",
+            confidence="high",
+            evidence_summary="lag seen",
+            suspected_root_cause_id="RC-014",
+        ),
+        ctx,
+    )
+    assert ctx.diagnosis is not None
+    assert ctx.diagnosis.root_cause_id == "RC-014"
+    assert outcome.data["proposal"]["root_cause_id"] == "RC-014"
 
 
 def test_propose_resolution_is_marked_pending_confirmation(memory, catalog) -> None:

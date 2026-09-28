@@ -125,6 +125,8 @@ class Proposal(BaseModel):
     cited_memory_ids: list[str] = Field(default_factory=list)
     confidence: Literal["low", "medium", "high"] | None = None
     runbook_id: str | None = None
+    #: Only a diagnosis proposal carries this. Checked against the catalog.
+    root_cause_id: str | None = None
     proposed_by: str = "agent"
     proposed_at: datetime = Field(default_factory=_now)
 

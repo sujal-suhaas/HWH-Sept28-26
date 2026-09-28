@@ -89,6 +89,10 @@ class Catalog:
             return {
                 "company": self.company,
                 "services": [item.to_dict() for item in self.services],
+                # The model has to name a suspected cause from this vocabulary or
+                # not name one at all. Handing it the ids is what makes the
+                # diagnosis checkable instead of a prose guess.
+                "root_causes": [item.to_dict() for item in self.root_causes],
             }
 
         found = self.service(service)

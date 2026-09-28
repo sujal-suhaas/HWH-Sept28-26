@@ -88,6 +88,13 @@ class ProposeDiagnosisArgs(BaseModel):
         default_factory=list,
         description="Memory ids returned by tools in this run that support the hypothesis",
     )
+    suspected_root_cause_id: str | None = Field(
+        default=None,
+        description=(
+            "Id of the suspected root cause from the catalog returned by get_service_map, "
+            "if one applies. Omit rather than guess."
+        ),
+    )
 
 
 class ProposeResolutionArgs(BaseModel):
@@ -268,6 +275,14 @@ def validate_grounding(
                 f"returned by lookup_runbook."
             )
 
+    if name == "propose_diagnosis":
+        root_cause_id = getattr(args, "suspected_root_cause_id", None)
+        if root_cause_id and ctx.catalog.root_cause(root_cause_id) is None:
+            errors.append(
+                f"suspected_root_cause_id '{root_cause_id}' does not exist in the catalog. "
+                f"Use a root cause id from get_service_map, or omit the field."
+            )
+
     return errors
 
 
@@ -311,7 +326,7 @@ def _outcome_query(service: str, text: str) -> str:
     return f"{service} {' '.join(text.split()[:_OUTCOME_QUERY_WORDS])}"
 
 
-def _render_hits(hits: list[RecallHit]) -> str:
+def _render_hits(hits: list[RecallHit], catalog: Catalog | None = None) -> str:
     lines = []
     for hit in hits:
         line = f"- [{hit.memory_id}] {hit.text}"
@@ -322,6 +337,12 @@ def _render_hits(hits: list[RecallHit]) -> str:
         # has nothing to put in `runbook_id` and invents one.
         if hit.runbook_id:
             annotations.append(f"runbook_id={hit.runbook_id}")
+            # A runbook treats exactly one cause, so the cause id travels with it.
+            # Without this the model sees the fix but not the cause it addresses.
+            if catalog is not None:
+                runbook = catalog.runbook(hit.runbook_id)
+                if runbook is not None:
+                    annotations.append(f"root_cause_id={runbook.root_cause_id}")
         if hit.incident_id:
             annotations.append(f"incident_id={hit.incident_id}")
         if not hit.metadata:
@@ -492,7 +513,7 @@ def handle_lookup_runbook(ctx: ToolContext, args: LookupRunbookArgs) -> ToolOutc
             f"{len(deduped)} validated runbook/fix memories"
             + (f" for {args.service}" if args.service else " (no service filter)")
             + ":\n"
-            + _render_hits(deduped)
+            + _render_hits(deduped, ctx.catalog)
             + (
                 "\nNote: these are validated fixes for other services and may not apply here."
                 if has_unscoped_runbook
@@ -541,6 +562,7 @@ def handle_propose_diagnosis(ctx: ToolContext, args: ProposeDiagnosisArgs) -> To
         evidence_summary=args.evidence_summary,
         cited_memory_ids=list(args.cited_memory_ids),
         confidence=args.confidence,
+        root_cause_id=args.suspected_root_cause_id,
     )
     updated = ctx.diagnosis is not None
     ctx.diagnosis = proposal
@@ -548,6 +570,7 @@ def handle_propose_diagnosis(ctx: ToolContext, args: ProposeDiagnosisArgs) -> To
         summary=(
             f"Diagnosis proposal {'updated' if updated else 'recorded'} and awaiting operator "
             f"confirmation. It is not confirmed and must not be treated as a root cause. "
+            f"suspected_root_cause_id={args.suspected_root_cause_id} "
             f"cited_memory_ids={list(args.cited_memory_ids)}"
         ),
         data={"proposal": proposal.model_dump(mode="json")},
