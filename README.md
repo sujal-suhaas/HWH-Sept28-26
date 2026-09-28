@@ -124,6 +124,12 @@ validation/authentication errors are not retried. After retries are exhausted th
 degraded mode and the Memory Inspector says so. A failed authoritative retain is never reported as
 a successful one.
 
+A malformed result inside an otherwise successful recall is rejected and logged, and the well-formed
+results beside it are kept. Letting it raise would present a bad row as a provider outage and spend
+the retry budget on something retrying cannot fix; letting it through would hand the model a hit with
+no id, which it could cite and which could not be traced back to a memory. A result with no id or no
+text is not evidence; a result with an unparseable score keeps its text and loses only the score.
+
 ---
 
 ## Quickstart
@@ -214,13 +220,13 @@ The agent may *propose*. Only the backend lifecycle may *commit* an authoritativ
 
 ## Status
 
-Phase 0–3:
+Phase 0–5:
 
 - [x] Backend boots, `/health` returns 200
 - [x] Memory adapter isolated behind `src/memory/hindsight_client.py`
 - [x] Tags used for recall scoping, metadata for context
 - [x] Memory ON/OFF switch with a no-call OFF store
-- [x] Bounded retry with honest degradation
+- [x] Bounded retry with honest degradation, including malformed results
 - [x] Unit tests for the memory layer, including failure paths
 - [x] Agent loop, tools, Groq client with model fallback
 - [x] HTTP routes for incidents, chat, and operator feedback
@@ -228,10 +234,14 @@ Phase 0–3:
 - [x] Operator feedback controls with visible confirmation state
 - [x] NimbusPay dataset and Hindsight seeding
 - [x] Playwright happy path
-- [ ] Learning evaluation with measured before/after results
+- [x] Learning evaluation with measured results — one pattern ladder and one teach replay, both on
+      the primary model. See [`docs/architecture.md`](docs/architecture.md) §10.7
+- [ ] Screenshots from a live run
 
 See [`docs/architecture.md`](docs/architecture.md) for the verified Hindsight
-behaviour this design depends on, and why each decision was made.
+behaviour this design depends on, and why each decision was made. §10.8 records
+the two bugs that running the evaluation found — one of which the test suite
+could not have caught.
 
 ## License
 
