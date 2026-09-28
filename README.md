@@ -107,6 +107,16 @@ no relevant memory found
 memory service unavailable
 ```
 
+`memory off` is a fifth, separate state: a run with memory off has no traces at
+all, and the Inspector says Hindsight was not called rather than reporting an
+empty result. "No memory was consulted" and "no relevant memory was found" are
+different claims, and the UI does not blur them.
+
+In the UI the toggle is per-request, so the same alert can be run both ways
+without restarting anything. Each incident carries the mode it ran in, and the
+**Re-run with memory off/on** button replays the current alert in the other mode
+— which is the whole comparison in one click.
+
 ### Degradation policy
 
 Transient Hindsight failures are retried with bounded exponential backoff. Permanent
@@ -142,7 +152,36 @@ Every configuration key is documented in [`.env.example`](.env.example).
 ```bash
 uv run pytest        # backend unit tests, no network required
 uv run ruff check .
+
+cd frontend
+npm test             # component and unit tests
+npm run typecheck
+npm run build
 ```
+
+### The browser happy path
+
+The end-to-end test drives alert → recall → grounded diagnosis → operator
+confirmation → visible memory trace. It runs against
+[`scripts/serve_e2e.py`](scripts/serve_e2e.py), a harness that serves the real
+routes, the real contract and the real trace log but replaces the model and the
+memory provider with fakes — so it needs no API keys and is reproducible.
+
+```bash
+cd frontend
+npm run test:e2e:install   # one-off: Chromium
+npm run test:e2e
+```
+
+It starts both servers itself. To run it against the live Hindsight and Groq
+stack instead, start the backend with real keys and run
+`npx playwright test` with `reuseExistingServer` already satisfied.
+
+### Pointing the UI at a data source
+
+The UI talks to the live API by default. Add `?source=mock` to the URL to use the
+hand-written fixtures instead — useful offline, and what the component tests do.
+The header always shows which one is in use; the app never falls back silently.
 
 ---
 
@@ -175,7 +214,7 @@ The agent may *propose*. Only the backend lifecycle may *commit* an authoritativ
 
 ## Status
 
-Phase 0–1 of the build plan:
+Phase 0–3:
 
 - [x] Backend boots, `/health` returns 200
 - [x] Memory adapter isolated behind `src/memory/hindsight_client.py`
@@ -183,12 +222,16 @@ Phase 0–1 of the build plan:
 - [x] Memory ON/OFF switch with a no-call OFF store
 - [x] Bounded retry with honest degradation
 - [x] Unit tests for the memory layer, including failure paths
-- [ ] Agent loop, tools, Groq client
-- [ ] HTTP routes for incidents, chat, and operator feedback
-- [ ] Frontend, Memory Inspector, memory toggle
-- [ ] NimbusPay dataset and Hindsight seeding
+- [x] Agent loop, tools, Groq client with model fallback
+- [x] HTTP routes for incidents, chat, and operator feedback
+- [x] Frontend: alert feed, timeline, chat, Memory Inspector, memory toggle
+- [x] Operator feedback controls with visible confirmation state
+- [x] NimbusPay dataset and Hindsight seeding
+- [x] Playwright happy path
 - [ ] Learning evaluation with measured before/after results
-- [ ] Playwright happy path
+
+See [`docs/architecture.md`](docs/architecture.md) for the verified Hindsight
+behaviour this design depends on, and why each decision was made.
 
 ## License
 
