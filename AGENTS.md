@@ -45,15 +45,31 @@ use realistic data, and demonstrate obvious value within about 60 seconds.
 
 ---
 
-## 1. Team configuration — FILL THIS IN BEFORE THE FIRST COMMIT
+## 1. Team configuration
 
 | Key | Member A (repo owner) | Member B (collaborator) |
 | --- | --- | --- |
-| Name | `MEMBER_A_NAME` | `MEMBER_B_NAME` |
-| GitHub username | `MEMBER_A_GH_USERNAME` | `MEMBER_B_GH_USERNAME` |
-| Commit email | `MEMBER_A_EMAIL` | `MEMBER_B_EMAIL` |
+| Name | `Sujal Suhaas` | `Sai Srikar` |
+| GitHub username | `sujal-suhaas` | `srikar214` |
+| Commit email | `sujalsuhaas2007@gmail.com` | `saisrikar373@gmail.com` |
 | Role | Memory & Agent Lead | Data, Product & Demo Lead |
 | GitHub token env var | `GH_TOKEN_A` | `GH_TOKEN_B` |
+| Token type in use | fine-grained PAT | classic PAT |
+
+Required GitHub token permissions. A token that lacks these still *authenticates*, then fails every
+write with `403 Resource not accessible by personal access token`. Fine-grained PATs report no
+`x-oauth-scopes` header, so `gh auth status` cannot warn you — verify by attempting a write, not by
+reading the auth status.
+
+| Permission | `GH_TOKEN_A` | `GH_TOKEN_B` |
+| --- | --- | --- |
+| Contents | Read and write | Read and write |
+| Issues | Read and write | Read and write |
+| Pull requests | Read and write | Read and write |
+| Workflows | Read and write | Read and write |
+| Administration | Read and write (branch protection) | not required |
+
+A classic PAT with the `repo` and `workflow` scopes satisfies every row.
 
 Required runtime environment variables:
 
