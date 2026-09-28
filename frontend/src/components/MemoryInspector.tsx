@@ -16,6 +16,13 @@ function TraceRow({ trace }: { trace: MemoryTrace }) {
 
       {trace.query && <p className="mt-2 text-xs break-words text-slate-400">{trace.query}</p>}
 
+      {trace.no_match && trace.min_score !== null && (
+        <p className="mt-1 font-mono text-[11px] text-slate-500">
+          min_score {trace.min_score}
+          {trace.min_score === 0 && ' (exact tag scope)'}
+        </p>
+      )}
+
       {trace.tags.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
           {trace.tags.map((tag) => (

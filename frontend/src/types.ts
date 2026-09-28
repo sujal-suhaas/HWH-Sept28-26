@@ -144,18 +144,26 @@ export interface HealthResponse {
 export interface MemoryTrace {
   trace_id: string
   operation: string
+  /** The trace's own mode: 'on' | 'off' | 'degraded'. Not the incident's. */
   mode: string
+  started_at: string
+  finished_at: string
+  latency_ms: number
   success: boolean
-  degraded: boolean
   bank_id: string | null
   hit_count: number
-  latency_ms: number
   attempts: number
   error_code: string
   error_message: string | null
+  degraded: boolean
   query: string | null
   tags: string[]
+  /** Relevance threshold in force. `0` means an exact tag scope was the signal. */
+  min_score: number | null
   no_match: boolean
+  // `provider_trace` is deliberately not mirrored here. The backend sanitizes it
+  // and the UI has no use for it; typing it would invite rendering raw provider
+  // output, which AGENTS.md forbids.
 }
 
 // ---------------------------------------------------------------------------

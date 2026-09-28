@@ -100,6 +100,8 @@ describe('App', () => {
     await waitFor(() =>
       expect(within(inspector()).getByText('no relevant memory found')).toBeTruthy(),
     )
+    // The threshold that produced the empty result is shown, not implied.
+    expect(within(inspector()).getByText(/min_score 0\.2/)).toBeTruthy()
   })
 
   it('sends a chat message and renders the agent reply from the timeline', async () => {

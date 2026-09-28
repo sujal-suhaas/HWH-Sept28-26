@@ -288,9 +288,22 @@ export const MOCK_INCIDENTS: IncidentResponse[] = [
   memoryOffRun,
 ]
 
+/**
+ * A trace is `finished_at` plus the latency it reports; deriving `started_at`
+ * keeps the two consistent instead of hand-writing timestamps that can drift.
+ */
+const times = (endedAt: string, latencyMs: number) => {
+  const finished = new Date(endedAt)
+  return {
+    started_at: new Date(finished.getTime() - latencyMs).toISOString(),
+    finished_at: finished.toISOString(),
+  }
+}
+
 export const MOCK_TRACES: Record<string, MemoryTrace[]> = {
   'INC-1038': [
     {
+      ...times(at('15:02'), 412.7),
       trace_id: 'trace-mock-1038-a',
       operation: 'recall',
       mode: 'on',
@@ -304,9 +317,11 @@ export const MOCK_TRACES: Record<string, MemoryTrace[]> = {
       error_message: null,
       query: 'checkout-api p99 latency spike after payments-ledger deploy',
       tags: ['service:checkout-api', 'event_type:incident_open'],
+      min_score: 0.2,
       no_match: false,
     },
     {
+      ...times(at('15:02'), 388.2),
       trace_id: 'trace-mock-1038-b',
       operation: 'recall',
       mode: 'on',
@@ -320,9 +335,13 @@ export const MOCK_TRACES: Record<string, MemoryTrace[]> = {
       error_message: null,
       query: 'checkout-api ledger confirmation timeouts',
       tags: ['service:checkout-api', 'event_type:resolution'],
+      min_score: 0.2,
       no_match: false,
     },
     {
+      // An exact tag scope makes the tag the relevance signal, so the threshold
+      // is lifted to 0 rather than hiding a runbook that scores below it.
+      ...times(at('15:02'), 295.4),
       trace_id: 'trace-mock-1038-c',
       operation: 'recall',
       mode: 'on',
@@ -336,11 +355,13 @@ export const MOCK_TRACES: Record<string, MemoryTrace[]> = {
       error_message: null,
       query: 'checkout-api Kafka consumer lag on the payments topic',
       tags: ['event_type:runbook_entry', 'service:checkout-api'],
+      min_score: 0,
       no_match: false,
     },
   ],
   'INC-1044': [
     {
+      ...times(at('09:16'), 356.1),
       trace_id: 'trace-mock-1044-a',
       operation: 'recall',
       mode: 'on',
@@ -354,11 +375,14 @@ export const MOCK_TRACES: Record<string, MemoryTrace[]> = {
       error_message: null,
       query: 'checkout-api connection pool saturation',
       tags: ['service:checkout-api', 'event_type:incident_open'],
+      min_score: 0.2,
       no_match: true,
     },
   ],
   'INC-1051': [
     {
+      // The threshold never came into play: the call failed before scoring.
+      ...times(at('11:44'), 30012.4),
       trace_id: 'trace-mock-1051-a',
       operation: 'recall',
       mode: 'degraded',
@@ -372,9 +396,11 @@ export const MOCK_TRACES: Record<string, MemoryTrace[]> = {
       error_message: 'HTTP 503 from the memory service after 3 attempts',
       query: 'auth-service TLS certificate errors token validation',
       tags: ['service:auth-service'],
+      min_score: null,
       no_match: true,
     },
     {
+      ...times(at('11:45'), 10004.9),
       trace_id: 'trace-mock-1051-b',
       operation: 'health',
       mode: 'degraded',
@@ -388,6 +414,7 @@ export const MOCK_TRACES: Record<string, MemoryTrace[]> = {
       error_message: 'HTTP 503 from the memory service after 3 attempts',
       query: null,
       tags: [],
+      min_score: null,
       no_match: false,
     },
   ],
