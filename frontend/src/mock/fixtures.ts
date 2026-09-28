@@ -90,6 +90,7 @@ const ledgerDeployLatency: IncidentResponse = {
       'p99 latency spiked immediately after the payments-ledger deploy, and four prior incidents on this service show the same ledger-confirmation-timeout signature.',
     cited_memory_ids: ['mem-inc1010-open', 'mem-inc1017-postmortem', 'mem-inc1038-res'],
     confidence: 'high',
+    root_cause_id: 'RC-001',
     runbook_id: null,
     proposed_by: 'agent',
     proposed_at: at('15:03'),
@@ -170,6 +171,9 @@ const novelSaturation: IncidentResponse = {
       'No matching historical incident was found for this service and symptom, so this diagnosis is ungrounded.',
     cited_memory_ids: [],
     confidence: 'low',
+    // Deliberately null: the mock's ungrounded diagnosis names no cause, so the
+    // feedback form cannot prefill one and the operator must supply it.
+    root_cause_id: null,
     runbook_id: null,
     proposed_by: 'agent',
     proposed_at: at('09:17'),

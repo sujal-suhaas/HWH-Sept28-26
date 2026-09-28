@@ -529,3 +529,7 @@ account of them.
 
 The two failures are retried automatically on the next invocation, because incomplete records are
 not cache hits. The curve is complete when cutoffs 2 and 3 produce answers.
+
+`--mode teach` was attempted on the same day and both of its runs also ended in `model_failed` for
+the same reason. Its mechanism is tested without a model in `tests/api/test_teach_replay.py`; the
+live before/after result is not yet measured.

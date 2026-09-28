@@ -77,6 +77,8 @@ export interface Proposal {
   cited_memory_ids: string[]
   confidence: Confidence | null
   runbook_id: string | null
+  /** Only a diagnosis carries this. Catalog-validated server-side. */
+  root_cause_id?: string | null
   proposed_by: string
   proposed_at: string
 }

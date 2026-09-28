@@ -88,6 +88,18 @@
         "Drain the retry queue and confirm ledger latency is unaffected."
       ],
       "verified": true
+    },
+    {
+      "id": "RB-051",
+      "title": "Restore the previous signing key alongside the new key for an overlap window",
+      "root_cause_id": "RC-009",
+      "steps": [
+        "Reinstate the previous signing key alongside the new key.",
+        "Drain the delivery queue; failures queued before the rotation should clear.",
+        "Retire the previous key after a 24h overlap window, once the queue is empty.",
+        "Add a rotation checklist that requires a dual-key overlap window."
+      ],
+      "verified": true
     }
   ]
 }

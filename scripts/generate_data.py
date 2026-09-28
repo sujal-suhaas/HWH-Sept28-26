@@ -158,6 +158,19 @@ ROOT_CAUSES: list[dict[str, str]] = [
             "rebuilt the same entries concurrently, saturating payments-ledger."
         ),
     },
+    # Catalogued but never the cause of a seeded incident: no history, and no runbook
+    # promoted from one. This is the cause the teach-then-replay demo teaches, so the
+    # vocabulary must contain it while the memory bank must not.
+    {
+        "id": "RC-009",
+        "name": "signing_key_rotation_without_overlap",
+        "summary": "Webhook signing key rotated with no dual-key overlap window",
+        "detail": (
+            "The webhook signing key was rotated and the previous key retired immediately. "
+            "Deliveries queued before the rotation were signed with the retired key, so every "
+            "retry failed signature verification and the delivery queue backed up."
+        ),
+    },
 ]
 
 RUNBOOKS: list[dict[str, str]] = [
@@ -247,6 +260,21 @@ RUNBOOKS: list[dict[str, str]] = [
             "Cap webhook-dispatcher retry concurrency at 50.",
             "Enable exponential backoff with jitter on delivery retries.",
             "Drain the retry queue and confirm ledger latency is unaffected.",
+        ],
+        "verified": True,
+    },
+    # Catalogued, but no seeded incident validated it, so `build_seed_events` never
+    # promotes it to memory. It becomes retrievable only when the operator teaches the
+    # demo incident's outcome. That is the whole teach-then-replay mechanism.
+    {
+        "id": "RB-051",
+        "title": "Restore the previous signing key alongside the new key for an overlap window",
+        "root_cause_id": "RC-009",
+        "steps": [
+            "Reinstate the previous signing key alongside the new key.",
+            "Drain the delivery queue; failures queued before the rotation should clear.",
+            "Retire the previous key after a 24h overlap window, once the queue is empty.",
+            "Add a rotation checklist that requires a dual-key overlap window.",
         ],
         "verified": True,
     },
