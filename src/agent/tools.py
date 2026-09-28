@@ -28,7 +28,7 @@ from pydantic import BaseModel, Field, ValidationError
 from src.catalog import Catalog
 from src.contracts import Proposal
 from src.memory import MemoryStore, RecallHit, runbook_tags
-from src.memory.trace import utcnow
+from src.memory.trace import MemoryTrace, utcnow
 
 logger = logging.getLogger(__name__)
 
@@ -170,9 +170,22 @@ class ToolContext:
     recalled: list[RecallHit] = field(default_factory=list)
     recalled_ids: set[str] = field(default_factory=set)
     memory_trace_ids: list[str] = field(default_factory=list)
+    #: Where to register a trace so the Memory Inspector can show it. The agent
+    #: does not own the trace log; the API passes its sink in.
+    on_memory_trace: Callable[[MemoryTrace], None] | None = None
 
     diagnosis: Proposal | None = None
     resolution: Proposal | None = None
+
+    def record_trace(self, trace: MemoryTrace) -> None:
+        """Record one memory operation: its id on the run, the trace to the sink.
+
+        Keeping these together is what stops an incident referencing a trace the
+        log never received.
+        """
+        self.memory_trace_ids.append(trace.trace_id)
+        if self.on_memory_trace is not None:
+            self.on_memory_trace(trace)
 
     def record_hits(self, hits: list[RecallHit]) -> None:
         for hit in hits:
@@ -340,11 +353,11 @@ def handle_recall_similar_incidents(
     outcome_tags = [f"service:{args.service}", "event_type:resolution"]
 
     history = ctx.memory.recall(args.symptom, tags=history_tags, limit=args.limit)
-    ctx.memory_trace_ids.append(history.trace.trace_id)
+    ctx.record_trace(history.trace)
     outcomes = ctx.memory.recall(
         _outcome_query(args.service, args.symptom), tags=outcome_tags, limit=args.limit
     )
-    ctx.memory_trace_ids.append(outcomes.trace.trace_id)
+    ctx.record_trace(outcomes.trace)
 
     if not history.trace.success and not outcomes.trace.success:
         return ToolOutcome(
@@ -426,7 +439,7 @@ def handle_lookup_runbook(ctx: ToolContext, args: LookupRunbookArgs) -> ToolOutc
         limit=args.limit,
         min_score=0.0 if args.service else None,
     )
-    ctx.memory_trace_ids.append(runbook_outcome.trace.trace_id)
+    ctx.record_trace(runbook_outcome.trace)
     degraded = degraded or not runbook_outcome.trace.success
     collected.extend(runbook_outcome.hits)
 
@@ -439,7 +452,7 @@ def handle_lookup_runbook(ctx: ToolContext, args: LookupRunbookArgs) -> ToolOutc
     if args.incident_type:
         resolution_tags.append(f"incident_type:{args.incident_type}")
     resolution_outcome = ctx.memory.recall(query, tags=resolution_tags, limit=args.limit)
-    ctx.memory_trace_ids.append(resolution_outcome.trace.trace_id)
+    ctx.record_trace(resolution_outcome.trace)
     degraded = degraded or not resolution_outcome.trace.success
     collected.extend(resolution_outcome.hits)
 

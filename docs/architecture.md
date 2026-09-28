@@ -201,17 +201,52 @@ A runbook lookup is scoped by `event_type:runbook_entry` and **never** by `incid
 `RUNBOOK_ENTRY` events are keyed by root cause and service; adding an incident type made every
 runbook lookup return nothing. A test asserts this.
 
-### 2.6 The sync client cannot run inside an event loop
+### 2.6 The sync client is thread-affine — so the adapter owns a loop thread
 
-The Hindsight SDK is synchronous and fails with `This event loop is already running` if called from
-a running asyncio loop. Two consequences:
+Measured, not assumed. The SDK's synchronous wrappers (`retain`, `recall`, ...) call
+`asyncio.get_event_loop()` and then `loop.run_until_complete(...)` on the *calling* thread. The SDK's
+own docstring says those wrappers "exist for scripts and REPLs" and that the `a*` variants should be
+used from "frameworks like FastAPI".
 
-1. The startup bank probe in the FastAPI lifespan is executed via `asyncio.to_thread`.
-2. Every request handler is a sync `def`, so FastAPI runs it in the threadpool and the whole memory
-   layer stays synchronous. A test asserts the startup probe does not run on the event loop.
+Calling them through FastAPI fails, and not with the documented error. Every memory call from a
+handler returned `hindsight_unavailable` / `Timeout context manager should be used inside a task`,
+because FastAPI dispatches each sync handler to a threadpool thread whose loop the SDK cannot drive.
+A thread-matrix probe pinned the boundary exactly:
 
-> `ponytail:` a long agent run occupies one threadpool worker. If concurrent incident throughput
-> matters, move the agent loop to an async worker pool or use the SDK's `arecall`/`aretain`.
+| Calling context | Sync wrapper |
+| --- | --- |
+| main thread, no running loop | works |
+| main thread, inside `asyncio.run` | fails: `This event loop is already running` |
+| threadpool thread, no loop anywhere | works |
+| threadpool thread while a loop runs elsewhere | works |
+| **the same client reused from a second thread** | **fails** |
+
+That last row is the one that matters: the client binds to the first thread that uses it, so a
+single long-lived client shared across FastAPI's threadpool is broken by construction. It also means
+the failure is invisible to a test suite built on a thread-agnostic fake — which is why this survived
+until a live HTTP run.
+
+The adapter therefore calls the SDK's **async** methods (`acreate_bank`, `aretain`, `arecall`,
+`aget_version`, `adelete_bank`, `aclose`) and marshals each one onto a single dedicated event loop on
+a single dedicated thread (`_AsyncBridge`). `asyncio.run_coroutine_threadsafe` wraps the coroutine in
+a task, which is what `asyncio.timeout()` inside the SDK and aiohttp requires. One loop also means one
+`aiohttp` connection pool, since the SDK builds its session lazily on the loop of the first request.
+
+Consequences:
+
+1. `HindsightMemoryStore` is safe to call from the event-loop thread and from the threadpool. The
+   lifespan probe calls it directly; no `asyncio.to_thread` indirection is needed.
+2. Nothing outside `src/memory/hindsight_client.py` may touch the provider client. `delete_bank` was
+   added to the adapter for this reason — the seed script used to reach into `store._client` and call
+   the sync `delete_bank` on the main thread, which poisoned every later call in the same process.
+3. A retry builds a **fresh** coroutine per attempt; a coroutine cannot be awaited twice.
+
+Regression guard: `tests/memory/test_hindsight_client.py` drives the adapter through
+`asyncio.to_thread` while a loop is running, which is the exact FastAPI shape.
+
+> `ponytail:` one agent run still occupies one threadpool worker for its duration. If concurrent
+> incident throughput matters, make the handlers async and await the `a*` methods directly instead of
+> marshalling through the bridge.
 
 ---
 

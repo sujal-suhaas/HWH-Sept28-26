@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Callable
 from typing import Any
 
 from src.agent.groq_client import AllModelsFailedError, GroqChatClient, ModelResponse
@@ -34,10 +35,15 @@ from src.agent.trace import AgentRun, AgentStatus, ModelCall, ModelRole, ToolCal
 from src.catalog import Catalog
 from src.contracts import AlertPayload
 from src.memory import MemoryStore
+from src.memory.trace import MemoryTrace
 
 logger = logging.getLogger(__name__)
 
 MAX_REPAIRS_PER_TOOL = 1
+
+
+#: Callback used to register a memory trace with whatever owns the trace log.
+TraceSink = Callable[[MemoryTrace], None]
 
 
 def _assistant_message(response: ModelResponse) -> dict[str, Any]:
@@ -67,21 +73,29 @@ class AgentLoop:
         llm: GroqChatClient,
         catalog: Catalog,
         max_steps: int = 6,
+        on_memory_trace: TraceSink | None = None,
     ) -> None:
         self.memory = memory
         self.llm = llm
         self.catalog = catalog
         self.max_steps = max(1, max_steps)
+        self.on_memory_trace = on_memory_trace
 
     # --- message assembly ---------------------------------------------------
-    def _initial_messages(self, alert: AlertPayload, memory_mode: str) -> list[dict[str, Any]]:
+    def _initial_messages(
+        self, alert: AlertPayload, memory_mode: str, extra_user_messages: list[str] | None = None
+    ) -> list[dict[str, Any]]:
         system = SYSTEM_PROMPT
         if memory_mode == "off":
             system = f"{system}\n\n{render_memory_off_notice()}"
-        return [
+        messages: list[dict[str, Any]] = [
             {"role": "system", "content": system},
             {"role": "user", "content": render_alert(alert)},
         ]
+        # Follow-up turns, e.g. an operator chat question about the same incident.
+        for text in extra_user_messages or []:
+            messages.append({"role": "user", "content": text})
+        return messages
 
     # --- one tool call ------------------------------------------------------
     def _run_tool_call(
@@ -134,16 +148,23 @@ class AgentLoop:
         return record, _tool_message(call_id, outcome.summary)
 
     # --- main loop ----------------------------------------------------------
-    def run(self, alert: AlertPayload, incident_id: str) -> AgentRun:
+    def run(
+        self,
+        alert: AlertPayload,
+        incident_id: str,
+        *,
+        extra_user_messages: list[str] | None = None,
+    ) -> AgentRun:
         memory_mode = str(getattr(self.memory, "mode", "on"))
         ctx = ToolContext(
             incident_id=incident_id,
             memory=self.memory,
             catalog=self.catalog,
             memory_mode=memory_mode,
+            on_memory_trace=self.on_memory_trace,
         )
         run = AgentRun(incident_id=incident_id, memory_mode=memory_mode)
-        messages = self._initial_messages(alert, memory_mode)
+        messages = self._initial_messages(alert, memory_mode, extra_user_messages)
         repairs: dict[str, int] = {}
         exhausted = True
 

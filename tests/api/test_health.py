@@ -2,28 +2,8 @@
 
 from __future__ import annotations
 
-import asyncio
-
-from fastapi.testclient import TestClient
-
-from src.api.app import create_app
-from src.config import Settings
 from src.memory import InMemoryMemoryStore
-
-
-def make_client(*, mode: str = "on", store: object | None = None) -> TestClient:
-    settings = Settings(
-        memory_mode=mode,
-        hindsight_api_key="test-key",
-        hindsight_bank_id="dejaops-test",
-        groq_api_key="test-key",
-    )
-    app = create_app(settings)
-    if store is not None:
-        app.state.memory = store
-    elif mode == "on":
-        app.state.memory = InMemoryMemoryStore(bank_id=settings.hindsight_bank_id)
-    return TestClient(app)
+from tests.api.helpers import make_client
 
 
 def test_health_returns_200_without_touching_memory() -> None:
@@ -92,22 +72,6 @@ def test_cors_allows_the_frontend_origin() -> None:
         response = client.get("/health", headers={"Origin": "http://localhost:5173"})
 
     assert response.headers.get("access-control-allow-origin") == "http://localhost:5173"
-
-
-class _LoopDetectingStore(InMemoryMemoryStore):
-    """The Hindsight SDK is sync and cannot be driven from a running event loop."""
-
-    def create_bank_if_needed(self):  # type: ignore[no-untyped-def]
-        try:
-            asyncio.get_running_loop()
-        except RuntimeError:
-            return super().create_bank_if_needed()
-        raise AssertionError("create_bank_if_needed must not run on the event loop")
-
-
-def test_startup_memory_probe_runs_off_the_event_loop() -> None:
-    with make_client(store=_LoopDetectingStore(bank_id="dejaops-test")) as client:
-        assert client.get("/health").status_code == 200
 
 
 def test_startup_degrades_honestly_when_memory_is_down() -> None:
