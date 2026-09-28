@@ -116,6 +116,24 @@ def memory_health(request: Request) -> dict[str, Any]:
     return trace.model_dump(mode="json")
 
 
+@router.get("/catalog", tags=["system"])
+def catalog(request: Request) -> dict[str, Any]:
+    """The NimbusPay estate: services, root causes and runbooks.
+
+    The operator feedback UI needs *valid* root cause and runbook ids. Without
+    this it can only offer free text, and a typo is discovered as a 422 rather
+    than prevented. The runbook -> root cause mapping also lets the UI prefill
+    the cause from the runbook the agent already proposed.
+    """
+    loaded = _catalog(request)
+    return {
+        "company": loaded.company,
+        "services": [item.to_dict() for item in loaded.services],
+        "root_causes": [item.to_dict() for item in loaded.root_causes],
+        "runbooks": [item.to_dict() for item in loaded.runbooks],
+    }
+
+
 @router.get("/api/memory/traces", tags=["memory"])
 def memory_traces(request: Request, limit: int = 50) -> dict[str, Any]:
     """Recent memory traces, newest last. Backs the Memory Inspector."""
