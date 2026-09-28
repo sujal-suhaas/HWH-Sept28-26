@@ -1,6 +1,6 @@
 [project]
 name = "dejaops"
-version = "0.1.0"
+version = "1.0.0"
 description = "DejaOps - on-call incident response agent with cumulative Hindsight memory"
 readme = "README.md"
 requires-python = ">=3.11"
