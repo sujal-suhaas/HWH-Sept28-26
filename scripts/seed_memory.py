@@ -22,7 +22,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from src.memory.schema import EventType, MemoryEvent, Outcome
+from src.memory import events
+from src.memory.schema import MemoryEvent, Outcome
 
 SEED_DIR = Path("data/seed")
 STATE_PATH = Path("data/store/seed_state.json")
@@ -30,61 +31,53 @@ STATE_PATH = Path("data/store/seed_state.json")
 
 # --------------------------------------------------------------------------
 # Event construction (pure - testable without a network)
+#
+# The content formats live in src/memory/events.py because the live operator
+# feedback path writes the same categories. Two spellings of the same event
+# would make a live alert match the seeded history less well, silently.
+# These adapters only translate seed-shaped dicts into primitives.
 # --------------------------------------------------------------------------
+_OUTCOME_BY_NAME: dict[str, Outcome] = {
+    "confirmed": Outcome.CONFIRMED,
+    "rejected": Outcome.REJECTED,
+    "inconclusive": Outcome.INCONCLUSIVE,
+}
+
+
+def _opened_at(incident: dict[str, Any]) -> datetime:
+    return datetime.fromisoformat(incident["opened_at"].replace("Z", "+00:00"))
+
+
 def _incident_open_event(incident: dict[str, Any]) -> MemoryEvent:
     alert = incident["alert"]
-    signals = "; ".join(alert.get("signals", {}).get("error_samples", []))
-    content = (
-        f"Incident {incident['incident_id']} opened on {incident['service']} "
-        f"(severity {incident['severity']}, {incident['incident_type']}). "
-        f"Alert: {alert['title']}. Summary: {alert['summary']}"
-    )
-    if signals:
-        content += f" Initial signals: {signals}"
-    return MemoryEvent(
-        event_type=EventType.INCIDENT_OPEN,
+    return events.incident_open_event(
         incident_id=incident["incident_id"],
-        content=content,
-        context="incident open",
         service=incident["service"],
         severity=incident["severity"],
         incident_type=incident["incident_type"],
+        title=alert["title"],
+        summary=alert["summary"],
+        signals=alert.get("signals", {}).get("error_samples", []),
         environment=incident.get("environment", "prod"),
-        timestamp=datetime.fromisoformat(incident["opened_at"].replace("Z", "+00:00")),
+        timestamp=_opened_at(incident),
     )
 
 
 def _diagnosis_event(incident: dict[str, Any]) -> MemoryEvent | None:
     diagnosis = incident["diagnosis"]
-    outcome = diagnosis.get("outcome")
-    if outcome not in {"confirmed", "rejected", "inconclusive"}:
+    outcome = _OUTCOME_BY_NAME.get(diagnosis.get("outcome"))
+    if outcome is None:
         return None
-    mapping = {
-        "confirmed": Outcome.CONFIRMED,
-        "rejected": Outcome.REJECTED,
-        "inconclusive": Outcome.INCONCLUSIVE,
-    }
-    actual = diagnosis.get("actual_root_cause_id")
-    content = (
-        f"Diagnosis for incident {incident['incident_id']} ({incident['service']}, "
-        f"{incident['incident_type']}) was {outcome}. "
-        f"Agent hypothesis: {diagnosis['hypothesis']}."
-    )
-    if outcome == "confirmed" and actual:
-        content += f" Confirmed root cause: {actual}."
-    elif outcome == "rejected":
-        content += " The proposed hypothesis was rejected by the operator."
-    return MemoryEvent(
-        event_type=EventType.DIAGNOSIS,
+    return events.diagnosis_event(
         incident_id=incident["incident_id"],
-        content=content,
-        context="diagnosis outcome",
         service=incident["service"],
         severity=incident["severity"],
         incident_type=incident["incident_type"],
+        outcome=outcome,
+        hypothesis=diagnosis["hypothesis"],
+        confirmed_root_cause=diagnosis.get("actual_root_cause_id"),
         environment=incident.get("environment", "prod"),
-        outcome=mapping[outcome],
-        timestamp=datetime.fromisoformat(incident["opened_at"].replace("Z", "+00:00")),
+        timestamp=_opened_at(incident),
     )
 
 
@@ -92,27 +85,16 @@ def _resolution_event(incident: dict[str, Any]) -> MemoryEvent | None:
     resolution = incident["resolution"]
     if incident["diagnosis"].get("outcome") != "confirmed" or not resolution.get("verified"):
         return None
-    runbook_id = resolution.get("validated_runbook_id")
-    content = (
-        f"Resolution for incident {incident['incident_id']} ({incident['service']}, "
-        f"{incident['incident_type']}): validated fix - {resolution['fix']}. "
-        f"Verified by the operator. "
-        f"Time to resolve: {resolution['time_to_resolve_minutes']} minutes."
-    )
-    if runbook_id:
-        content += f" Runbook: {runbook_id}."
-    return MemoryEvent(
-        event_type=EventType.RESOLUTION,
+    return events.resolution_event(
         incident_id=incident["incident_id"],
-        content=content,
-        context="validated resolution",
         service=incident["service"],
         severity=incident["severity"],
         incident_type=incident["incident_type"],
+        fix=resolution["fix"],
+        runbook_id=resolution.get("validated_runbook_id"),
+        time_to_resolve_minutes=resolution["time_to_resolve_minutes"],
         environment=incident.get("environment", "prod"),
-        outcome=Outcome.CONFIRMED,
-        runbook_id=runbook_id,
-        timestamp=datetime.fromisoformat(incident["opened_at"].replace("Z", "+00:00")),
+        timestamp=_opened_at(incident),
     )
 
 
@@ -120,20 +102,15 @@ def _postmortem_event(
     postmortem: dict[str, Any], incidents: dict[str, dict[str, Any]]
 ) -> MemoryEvent:
     incident = incidents.get(postmortem["incident_id"], {})
-    contributing = "; ".join(postmortem.get("contributing_factors", []))
-    prevention = "; ".join(postmortem.get("prevention", []))
-    content = (
-        f"Postmortem {postmortem['postmortem_id']} for incident {postmortem['incident_id']} "
-        f"({postmortem['service']}): root cause {postmortem['root_cause_id']} - "
-        f"{postmortem['root_cause']}. {postmortem['detail']} "
-        f"Contributing factors: {contributing}. Prevention: {prevention}."
-    )
-    return MemoryEvent(
-        event_type=EventType.POSTMORTEM,
+    return events.postmortem_event(
+        postmortem_id=postmortem["postmortem_id"],
         incident_id=postmortem["incident_id"],
-        content=content,
-        context="postmortem",
         service=postmortem["service"],
+        root_cause_id=postmortem["root_cause_id"],
+        root_cause=postmortem["root_cause"],
+        detail=postmortem["detail"],
+        contributing_factors=postmortem.get("contributing_factors", []),
+        prevention=postmortem.get("prevention", []),
         severity=incident.get("severity"),
         incident_type=incident.get("incident_type"),
         environment=incident.get("environment", "prod"),
@@ -154,22 +131,13 @@ def _runbook_event(
     only the first service was tagged, so ``lookup_runbook(service="checkout-api")``
     could never find it.
     """
-    steps = " ".join(f"{index + 1}) {step}" for index, step in enumerate(runbook["steps"]))
-    content = (
-        f"Validated runbook {runbook['id']} for root cause {runbook['root_cause_id']}: "
-        f"{runbook['title']}. Steps: {steps}"
-    )
-    return MemoryEvent(
-        event_type=EventType.RUNBOOK_ENTRY,
-        incident_id=f"RUNBOOK-{runbook['id']}",
-        content=content,
-        context="validated runbook",
-        service=service,
-        incident_type=None,
+    return events.runbook_entry_event(
         runbook_id=runbook["id"],
-        outcome=Outcome.CONFIRMED,
-        timestamp=promoted_at,
-        document_id=f"RUNBOOK-{runbook['id']}:{service or 'global'}:runbook_entry",
+        root_cause_id=runbook["root_cause_id"],
+        title=runbook["title"],
+        steps=runbook["steps"],
+        service=service,
+        promoted_at=promoted_at,
     )
 
 
@@ -357,13 +325,9 @@ def main() -> int:
 
 def _reset_bank(store: Any) -> Any:
     """Delete and recreate the bank. Kept separate so --dry-run never reaches it."""
-    client = getattr(store, "_client", None)
-    if client is None:
-        raise RuntimeError("cannot reset a memory store without a provider client")
-    try:
-        client.delete_bank(bank_id=store.bank_id)
-    except Exception as exc:  # noqa: BLE001 - a missing bank is fine
-        print(f"delete_bank reported: {exc}")
+    if not hasattr(store, "delete_bank"):
+        raise RuntimeError("cannot reset a memory store that cannot delete a bank")
+    store.delete_bank()
     return store.create_bank_if_needed()
 
 

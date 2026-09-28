@@ -13,9 +13,13 @@ Provider failures never raise. They are reported through
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import logging
 import re
+import threading
 import time
+from collections.abc import Coroutine
 from typing import Any
 
 from hindsight_client import Hindsight
@@ -45,6 +49,8 @@ _DEFAULT_TAGS_MATCH = "all"
 # larger budget buys nothing and costs latency.
 _RECALL_BUDGET = "mid"
 _RECALL_MAX_TOKENS = 4096
+
+_BRIDGE_START_TIMEOUT = 10.0
 
 _INCIDENT_ID_RE = re.compile(r"(?:INC|RUNBOOK)-[A-Za-z0-9]+")
 _RUNBOOK_ID_RE = re.compile(r"\b(RB-\d+)\b")
@@ -124,6 +130,66 @@ def _classify(exc: BaseException) -> tuple[bool, ErrorCode]:
     return False, ErrorCode.UNKNOWN
 
 
+class _AsyncBridge:
+    """Run coroutines on one dedicated event loop, on one dedicated thread.
+
+    The SDK's synchronous wrappers (``retain``, ``recall``, ...) drive
+    ``run_until_complete`` on whatever loop the calling thread happens to have.
+    Its own documentation says those wrappers "exist for scripts and REPLs" and
+    should not be used from a framework. That matters here because FastAPI
+    dispatches every sync handler to a worker thread, where the wrappers fail.
+
+    So the async client is pinned to a single loop on a single thread and every
+    call is marshalled onto it. One loop also means one aiohttp connection pool,
+    because the SDK builds its session lazily on the loop of the first request.
+    """
+
+    def __init__(self) -> None:
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._thread: threading.Thread | None = None
+        self._ready = threading.Event()
+        self._start_lock = threading.Lock()
+
+    def _serve(self) -> None:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        self._loop = loop
+        self._ready.set()
+        loop.run_forever()
+
+    def _ensure_started(self) -> asyncio.AbstractEventLoop:
+        with self._start_lock:
+            if self._loop is None:
+                self._ready.clear()
+                self._thread = threading.Thread(
+                    target=self._serve, name="hindsight-loop", daemon=True
+                )
+                self._thread.start()
+                if not self._ready.wait(timeout=_BRIDGE_START_TIMEOUT):
+                    raise RuntimeError("Hindsight event loop thread did not start")
+            assert self._loop is not None
+            return self._loop
+
+    def run(self, coro: Coroutine[Any, Any, Any]) -> Any:
+        """Run ``coro`` to completion and return its result, from any thread."""
+        loop = self._ensure_started()
+        # run_coroutine_threadsafe wraps the coroutine in a task, which is what
+        # asyncio.timeout() inside the SDK requires.
+        return asyncio.run_coroutine_threadsafe(coro, loop).result()
+
+    def close(self) -> None:
+        with self._start_lock:
+            loop, thread = self._loop, self._thread
+            self._loop, self._thread = None, None
+        if loop is None:
+            return
+        with contextlib.suppress(RuntimeError):
+            loop.call_soon_threadsafe(loop.stop)
+        if thread is not None:
+            thread.join(timeout=_BRIDGE_START_TIMEOUT)
+        loop.close()
+
+
 class HindsightMemoryStore:
     """Hindsight-backed :class:`~src.memory.interface.MemoryStore`."""
 
@@ -145,6 +211,7 @@ class HindsightMemoryStore:
         self.min_final_score = min_final_score
         self._max_retries = max(0, max_retries)
         self._backoff_base = backoff_base_seconds
+        self._bridge = _AsyncBridge()
         self._client = client or Hindsight(
             base_url=base_url,
             api_key=api_key or None,
@@ -177,8 +244,9 @@ class HindsightMemoryStore:
     ) -> tuple[Any, int, BaseException | None, ErrorCode]:
         """Run ``func`` with bounded exponential backoff.
 
-        Returns ``(result, attempts, last_error, error_code)``. Permanent errors
-        are never retried.
+        ``func`` returns a fresh coroutine each call, so a retry never re-awaits
+        a spent one. Returns ``(result, attempts, last_error, error_code)``.
+        Permanent errors are never retried.
         """
         attempts = 0
         last_error: BaseException | None = None
@@ -186,7 +254,7 @@ class HindsightMemoryStore:
         for attempt in range(self._max_retries + 1):
             attempts = attempt + 1
             try:
-                return func(), attempts, None, ErrorCode.NONE
+                return self._bridge.run(func()), attempts, None, ErrorCode.NONE
             except Exception as exc:  # noqa: BLE001 - provider errors are opaque
                 retryable, code = _classify(exc)
                 last_error = exc
@@ -231,12 +299,12 @@ class HindsightMemoryStore:
         started_at = utcnow()
         result, attempts, error, code = self._call_with_retry(
             "create_bank",
-            lambda: self._client.create_bank(bank_id=self.bank_id, name=self.bank_id),
+            lambda: self._client.acreate_bank(bank_id=self.bank_id, name=self.bank_id),
         )
         if error is not None:
             # The bank may already exist. Verify before reporting failure.
             existing, verify_attempts, verify_error, verify_code = self._call_with_retry(
-                "get_bank_config", lambda: self._client.get_bank_config(bank_id=self.bank_id)
+                "get_bank_config", lambda: self._client.aget_bank_config(bank_id=self.bank_id)
             )
             if verify_error is None:
                 return MemoryTrace.build(
@@ -270,7 +338,7 @@ class HindsightMemoryStore:
         document_id = event.document_id_or_default()
 
         def _do_retain() -> Any:
-            return self._client.retain(
+            return self._client.aretain(
                 bank_id=self.bank_id,
                 content=event.content,
                 context=event.context,
@@ -333,7 +401,7 @@ class HindsightMemoryStore:
                 # returns unrelated memory.
                 kwargs["tags"] = scope_tags
                 kwargs["tags_match"] = tags_match
-            return self._client.recall(**kwargs)
+            return self._client.arecall(**kwargs)
 
         result, attempts, error, code = self._call_with_retry("recall", _do_recall)
         if error is not None:
@@ -392,7 +460,7 @@ class HindsightMemoryStore:
     def health(self) -> MemoryTrace:
         started_at = utcnow()
         result, attempts, error, code = self._call_with_retry(
-            "get_version", lambda: self._client.get_version()
+            "get_version", lambda: self._client.aget_version()
         )
         if error is not None:
             return self._failure(MemoryOperation.HEALTH, started_at, error, code, attempts)
@@ -409,8 +477,24 @@ class HindsightMemoryStore:
             },
         )
 
+    def delete_bank(self) -> bool:
+        """Delete the bank. Offline seeding only, so it produces no trace.
+
+        This exists so nothing outside this module ever touches the provider
+        client: the SDK's sync wrappers bind to the calling thread, and a raw
+        call from a thread the adapter does not own poisons every later call.
+        """
+        try:
+            self._bridge.run(self._client.adelete_bank(bank_id=self.bank_id))
+        except Exception as exc:  # noqa: BLE001 - a missing bank is fine
+            logger.warning("Hindsight delete_bank failed: %s", exc)
+            return False
+        return True
+
     def close(self) -> None:
         try:
-            self._client.close()
+            self._bridge.run(self._client.aclose())
         except Exception as exc:  # noqa: BLE001
             logger.warning("closing Hindsight client failed: %s", exc)
+        finally:
+            self._bridge.close()

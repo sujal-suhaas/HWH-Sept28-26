@@ -7,6 +7,7 @@ carried as context, and an explicit empty-recall signal.
 
 from __future__ import annotations
 
+import asyncio
 from types import SimpleNamespace
 from typing import Any
 
@@ -41,6 +42,7 @@ class FakeHindsight:
         recall_errors: list[Exception] | None = None,
         create_bank_errors: list[Exception] | None = None,
         bank_config_errors: list[Exception] | None = None,
+        delete_bank_errors: list[Exception] | None = None,
         recall_results: list[Any] | None = None,
         recall_trace: dict[str, Any] | None = None,
     ) -> None:
@@ -48,6 +50,7 @@ class FakeHindsight:
         self.recall_errors = list(recall_errors or [])
         self.create_bank_errors = list(create_bank_errors or [])
         self.bank_config_errors = list(bank_config_errors or [])
+        self.delete_bank_errors = list(delete_bank_errors or [])
         self.recall_results = recall_results if recall_results is not None else [recall_item()]
         self.recall_trace = recall_trace or {"summary": {"results_returned": 1}}
         self.calls: list[tuple[str, dict[str, Any]]] = []
@@ -57,33 +60,37 @@ class FakeHindsight:
         if errors:
             raise errors.pop(0)
 
-    def create_bank(self, **kwargs: Any) -> Any:
+    async def acreate_bank(self, **kwargs: Any) -> Any:
         self.calls.append(("create_bank", kwargs))
         self._maybe_fail(self.create_bank_errors)
         return SimpleNamespace(bank_id=kwargs.get("bank_id"))
 
-    def get_bank_config(self, **kwargs: Any) -> Any:
+    async def aget_bank_config(self, **kwargs: Any) -> Any:
         self.calls.append(("get_bank_config", kwargs))
         self._maybe_fail(self.bank_config_errors)
         return {"bank_id": kwargs.get("bank_id")}
 
-    def retain(self, **kwargs: Any) -> Any:
+    async def aretain(self, **kwargs: Any) -> Any:
         self.calls.append(("retain", kwargs))
         self._maybe_fail(self.retain_errors)
         return SimpleNamespace(success=True, bank_id=kwargs.get("bank_id"), items_count=1)
 
-    def recall(self, **kwargs: Any) -> Any:
+    async def arecall(self, **kwargs: Any) -> Any:
         self.calls.append(("recall", kwargs))
         self._maybe_fail(self.recall_errors)
         return SimpleNamespace(results=self.recall_results, trace=self.recall_trace)
 
-    def get_version(self) -> Any:
+    async def adelete_bank(self, **kwargs: Any) -> Any:
+        self.calls.append(("delete_bank", kwargs))
+        self._maybe_fail(self.delete_bank_errors)
+        return SimpleNamespace(success=True)
+
+    async def aget_version(self) -> Any:
         self.calls.append(("get_version", {}))
         return SimpleNamespace(api_version="0.10.1")
 
-    def close(self) -> None:
+    async def aclose(self) -> None:
         self.closed = True
-
     def calls_named(self, name: str) -> list[dict[str, Any]]:
         return [kwargs for call, kwargs in self.calls if call == name]
 
@@ -508,6 +515,50 @@ def test_close_is_forwarded() -> None:
     store.close()
 
     assert client.closed is True
+
+
+def test_calls_succeed_from_a_worker_thread_while_a_loop_is_running() -> None:
+    """The FastAPI shape: a sync handler on a worker thread, loop elsewhere.
+
+    The SDK's sync wrappers drive ``run_until_complete`` on the caller's loop,
+    which raises as soon as FastAPI dispatches a handler to a worker thread.
+    Regression guard for every memory call the API makes.
+    """
+
+    async def exercise() -> tuple[bool, bool, int, bool]:
+        client = FakeHindsight()
+        store = make_store(client)
+        bank = await asyncio.to_thread(store.create_bank_if_needed)
+        retained = await asyncio.to_thread(store.retain, make_event())
+        recalled = await asyncio.to_thread(store.recall, "checkout latency")
+        await asyncio.to_thread(store.close)
+        return bank.success, retained.success, len(recalled.hits), client.closed
+
+    bank_ok, retain_ok, hits, closed = asyncio.run(exercise())
+
+    assert (bank_ok, retain_ok, hits, closed) == (True, True, 1, True)
+
+
+def test_a_retry_after_a_failure_still_works() -> None:
+    """A retry must build a fresh coroutine; a spent one cannot be re-awaited."""
+    client = FakeHindsight(retain_errors=[ApiError(503)])
+    store = make_store(client)
+
+    trace = store.retain(make_event())
+
+    assert trace.success is True
+    assert trace.attempts == 2
+
+
+def test_delete_bank_is_forwarded_and_reports_failure() -> None:
+    client = FakeHindsight()
+    store = make_store(client)
+
+    assert store.delete_bank() is True
+    assert len(client.calls_named("delete_bank")) == 1
+
+    failing = FakeHindsight(delete_bank_errors=[ApiError(500)])
+    assert make_store(failing).delete_bank() is False
 
 
 def test_error_message_does_not_contain_the_api_key() -> None:
