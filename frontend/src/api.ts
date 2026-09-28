@@ -1,34 +1,8 @@
-/** Minimal typed client for the DejaOps backend. */
+/** Minimal typed client for the DejaOps system endpoints. */
+
+import type { HealthResponse, MemoryTrace } from './types'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
-
-export type MemoryMode = 'on' | 'off'
-
-export interface HealthResponse {
-  status: string
-  version: string
-  memory_mode: MemoryMode
-  bank_id: string
-  model_primary: string
-  model_fallback: string
-}
-
-export interface MemoryTrace {
-  trace_id: string
-  operation: string
-  mode: string
-  success: boolean
-  degraded: boolean
-  bank_id: string | null
-  hit_count: number
-  latency_ms: number
-  attempts: number
-  error_code: string
-  error_message: string | null
-  query: string | null
-  tags: string[]
-  no_match: boolean
-}
 
 export async function fetchHealth(signal?: AbortSignal): Promise<HealthResponse> {
   const response = await fetch(`${API_BASE}/health`, { signal })

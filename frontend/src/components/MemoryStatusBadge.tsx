@@ -1,4 +1,4 @@
-import type { MemoryTrace } from '../api'
+import type { MemoryTrace } from '../types'
 
 export type MemoryStateLabel =
   | 'memory recalled'
@@ -19,13 +19,18 @@ export interface MemoryState {
  * The rule this component exists to enforce: never render "recalled" for a
  * recall that failed, was empty, or never happened.
  */
+/** The state for a run where Hindsight was never called at all. */
+export function memoryOffState(): MemoryState {
+  return {
+    label: 'memory off',
+    tone: 'neutral',
+    detail: 'memory_mode=off — Hindsight was not called',
+  }
+}
+
 export function describeMemoryState(trace: MemoryTrace): MemoryState {
   if (trace.mode === 'off') {
-    return {
-      label: 'memory off',
-      tone: 'neutral',
-      detail: 'memory_mode=off — Hindsight was not called',
-    }
+    return memoryOffState()
   }
 
   if (!trace.success) {
@@ -73,8 +78,7 @@ const TONE_CLASSES: Record<MemoryState['tone'], string> = {
   bad: 'bg-rose-500/15 text-rose-300 ring-rose-500/30',
 }
 
-export function MemoryStatusBadge({ trace }: { trace: MemoryTrace }) {
-  const state = describeMemoryState(trace)
+export function MemoryStatePill({ state }: { state: MemoryState }) {
   return (
     <span
       data-testid="memory-state"
@@ -85,4 +89,8 @@ export function MemoryStatusBadge({ trace }: { trace: MemoryTrace }) {
       {state.label}
     </span>
   )
+}
+
+export function MemoryStatusBadge({ trace }: { trace: MemoryTrace }) {
+  return <MemoryStatePill state={describeMemoryState(trace)} />
 }

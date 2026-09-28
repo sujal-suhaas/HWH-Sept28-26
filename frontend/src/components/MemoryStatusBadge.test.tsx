@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import type { MemoryTrace } from '../api'
+import type { MemoryTrace } from '../types'
 import { describeMemoryState, MemoryStatusBadge } from './MemoryStatusBadge'
 
 function trace(overrides: Partial<MemoryTrace> = {}): MemoryTrace {
