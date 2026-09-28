@@ -404,9 +404,11 @@ def handle_recall_similar_incidents(
     ctx.record_hits(hits)
     sections = []
     if history.hits:
-        sections.append("Similar past incidents:\n" + _render_hits(history.hits))
+        sections.append("Similar past incidents:\n" + _render_hits(history.hits, ctx.catalog))
     if outcomes.hits:
-        sections.append("Validated outcomes for this service:\n" + _render_hits(outcomes.hits))
+        sections.append(
+            "Validated outcomes for this service:\n" + _render_hits(outcomes.hits, ctx.catalog)
+        )
     return ToolOutcome(
         summary=(
             f"{len(hits)} relevant historical memories for {args.service}:\n\n"
