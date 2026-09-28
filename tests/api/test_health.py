@@ -3,7 +3,13 @@
 from __future__ import annotations
 
 from src.memory import InMemoryMemoryStore
-from tests.api.helpers import make_client
+from tests.agent.fake_llm import FakeLLM
+from tests.api.helpers import (
+    RC_KAFKA_LAG,
+    alert_body,
+    investigate_then_propose,
+    make_client,
+)
 
 
 def test_health_returns_200_without_touching_memory() -> None:
@@ -60,6 +66,49 @@ def test_memory_traces_limit_is_honoured() -> None:
         response = client.get("/api/memory/traces?limit=2")
 
     assert response.json()["count"] == 2
+
+
+def test_catalog_exposes_valid_root_cause_and_runbook_ids() -> None:
+    with make_client() as client:
+        response = client.get("/catalog")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["company"] == "NimbusPay"
+
+    root_causes = {item["id"]: item for item in body["root_causes"]}
+    runbooks = {item["id"]: item for item in body["runbooks"]}
+    assert root_causes and runbooks
+
+    # Every runbook must point at a root cause the same payload exposes, or the
+    # feedback UI could prefill a cause the API then rejects.
+    for runbook in runbooks.values():
+        assert runbook["root_cause_id"] in root_causes
+        assert runbook["title"]
+
+    # And the ids it advertises must be the ones the feedback endpoint accepts.
+    with make_client(llm=FakeLLM(investigate_then_propose())) as client:
+        incident_id = client.post("/alerts", json=alert_body()).json()["incident_id"]
+        accepted = client.post(
+            f"/incidents/{incident_id}/feedback",
+            json={
+                "feedback_type": "DIAGNOSIS_CONFIRMED",
+                "operator": "m.iyer",
+                "root_cause_id": RC_KAFKA_LAG,
+            },
+        )
+        rejected = client.post(
+            f"/incidents/{incident_id}/feedback",
+            json={
+                "feedback_type": "DIAGNOSIS_CONFIRMED",
+                "operator": "m.iyer",
+                "root_cause_id": "RC-does-not-exist",
+            },
+        )
+
+    assert accepted.status_code == 200, accepted.text
+    assert RC_KAFKA_LAG in root_causes
+    assert rejected.status_code == 422
 
 
 def test_unknown_route_is_404() -> None:
