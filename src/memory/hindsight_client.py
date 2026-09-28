@@ -19,7 +19,7 @@ import logging
 import re
 import threading
 import time
-from collections.abc import Coroutine
+from collections.abc import Coroutine, Iterable
 from typing import Any
 
 from hindsight_client import Hindsight
@@ -188,6 +188,79 @@ class _AsyncBridge:
         if thread is not None:
             thread.join(timeout=_BRIDGE_START_TIMEOUT)
         loop.close()
+
+
+def _to_hits(items: Iterable[Any]) -> list[RecallHit]:
+    """Normalize provider results, dropping entries that are not usable evidence.
+
+    A malformed entry is rejected and logged rather than crashing the recall.
+    Letting it raise would dress a bad row up as a provider outage and burn the
+    retry budget on something retrying cannot fix; letting it through would
+    hand the model a hit with no id, which it could then cite and which dedupe
+    could not tell apart from another such row. So: reject the row, keep the
+    rest, and say so.
+    """
+    hits: list[RecallHit] = []
+    for index, item in enumerate(items):
+        hit = _to_hit(item)
+        if hit is None:
+            logger.warning(
+                "hindsight returned a malformed result at index %d; rejected it", index
+            )
+            continue
+        hits.append(hit)
+    return hits
+
+
+def _to_hit(item: Any) -> RecallHit | None:
+    """Return a usable hit, or None if the entry is not usable evidence."""
+    if not hasattr(item, "__dict__") and not hasattr(item, "id"):
+        return None
+    memory_id = str(getattr(item, "id", "") or "").strip()
+    text = str(getattr(item, "text", "") or "").strip()
+    # A hit with no id cannot be cited, deduped, or traced back to a memory.
+    # A hit with no text is not evidence. Both are malformed, not merely thin.
+    if not memory_id or not text:
+        return None
+
+    scores = getattr(item, "scores", None)
+    raw_score = getattr(scores, "final", None) if scores is not None else None
+    try:
+        score = float(raw_score) if raw_score is not None else None
+    except (TypeError, ValueError):
+        # Keep the hit: the text is the evidence and the score is a ranking
+        # hint. Losing a real memory over an unparseable score would be worse.
+        logger.warning("hindsight result %s had a non-numeric score; ignoring it", memory_id)
+        score = None
+
+    raw_metadata = getattr(item, "metadata", None)
+    if raw_metadata is None:
+        metadata: dict[str, str] = {}
+    elif isinstance(raw_metadata, dict):
+        metadata = {str(k): str(v) for k, v in raw_metadata.items()}
+    else:
+        logger.warning("hindsight result %s had non-mapping metadata; dropping it", memory_id)
+        metadata = {}
+
+    raw_tags = getattr(item, "tags", None)
+    if isinstance(raw_tags, str) or not isinstance(raw_tags, Iterable):
+        if raw_tags is not None:
+            logger.warning("hindsight result %s had non-list tags; dropping them", memory_id)
+        tags: list[str] = []
+    else:
+        tags = [str(tag) for tag in raw_tags]
+
+    return RecallHit(
+        memory_id=memory_id,
+        text=text,
+        fact_type=getattr(item, "type", None),
+        score=score,
+        tags=tags,
+        metadata=metadata,
+        document_id=getattr(item, "document_id", None),
+        context=getattr(item, "context", None),
+        occurred_start=getattr(item, "occurred_start", None),
+    )
 
 
 class HindsightMemoryStore:
@@ -421,7 +494,7 @@ class HindsightMemoryStore:
             )
             return outcome
 
-        hits = [self._to_hit(item) for item in (getattr(result, "results", None) or [])]
+        hits = _to_hits(getattr(result, "results", None) or [])
         hits = _dedupe_hits(hits)[:limit]
         provider_trace = getattr(result, "trace", None)
         trace = MemoryTrace.build(
@@ -439,23 +512,6 @@ class HindsightMemoryStore:
             provider_trace=provider_trace,
         )
         return RecallOutcome(hits=hits, trace=trace)
-
-    @staticmethod
-    def _to_hit(item: Any) -> RecallHit:
-        scores = getattr(item, "scores", None)
-        score = getattr(scores, "final", None) if scores is not None else None
-        metadata = dict(getattr(item, "metadata", None) or {})
-        return RecallHit(
-            memory_id=str(getattr(item, "id", "") or ""),
-            text=str(getattr(item, "text", "") or ""),
-            fact_type=getattr(item, "type", None),
-            score=float(score) if score is not None else None,
-            tags=list(getattr(item, "tags", None) or []),
-            metadata=metadata,
-            document_id=getattr(item, "document_id", None),
-            context=getattr(item, "context", None),
-            occurred_start=getattr(item, "occurred_start", None),
-        )
 
     def health(self) -> MemoryTrace:
         started_at = utcnow()

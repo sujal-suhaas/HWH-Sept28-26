@@ -13,7 +13,7 @@ from typing import Any
 
 import pytest
 
-from src.memory.hindsight_client import HindsightMemoryStore
+from src.memory.hindsight_client import HindsightMemoryStore, _to_hit, _to_hits
 from src.memory.interface import RecallHit
 from src.memory.trace import ErrorCode, MemoryMode
 from tests.conftest import make_event, recall_item
@@ -21,7 +21,9 @@ from tests.conftest import make_event, recall_item
 
 def store_hit(item: Any) -> RecallHit:
     """Normalize a fake provider result the same way the adapter does."""
-    return HindsightMemoryStore._to_hit(item)
+    hit = _to_hit(item)
+    assert hit is not None, "the fixture should be a well-formed provider result"
+    return hit
 
 
 class ApiError(Exception):
@@ -569,3 +571,89 @@ def test_error_message_does_not_contain_the_api_key() -> None:
 
     assert trace.error_message is not None
     assert "super-secret-key" not in trace.error_message
+
+
+# --- §13: a malformed memory payload is rejected and logged, not trusted ------
+
+
+def test_a_result_with_no_id_is_rejected(caplog: pytest.LogCaptureFixture) -> None:
+    """An id-less hit cannot be cited, deduped, or traced. Reject it."""
+    with caplog.at_level("WARNING"):
+        assert _to_hits([recall_item(memory_id="")]) == []
+    assert "malformed" in caplog.text
+
+
+def test_a_result_with_no_text_is_rejected(caplog: pytest.LogCaptureFixture) -> None:
+    """A hit with no text is not evidence, however well-formed the rest is."""
+    with caplog.at_level("WARNING"):
+        assert _to_hits([recall_item(text="   ")]) == []
+    assert "malformed" in caplog.text
+
+
+@pytest.mark.parametrize("item", [None, "a string", 42, {"id": "m-1", "text": "x"}])
+def test_a_non_object_result_is_rejected(item: Any) -> None:
+    assert _to_hit(item) is None
+
+
+def test_a_malformed_result_does_not_break_the_ones_around_it() -> None:
+    """One bad row must not cost the caller the good rows beside it."""
+    hits = _to_hits([recall_item(memory_id="m-1"), None, recall_item(memory_id="m-2")])
+
+    assert [hit.memory_id for hit in hits] == ["m-1", "m-2"]
+
+
+def test_a_malformed_result_is_not_retried_as_a_provider_outage() -> None:
+    """A bad row is not a 5xx. Retrying it would burn the budget for nothing."""
+    client = FakeHindsight(recall_results=[None, recall_item(memory_id="m-1")])
+    store = make_store(client)
+
+    outcome = store.recall("checkout latency", tags=["service:checkout-api"])
+
+    assert outcome.trace.success is True
+    assert outcome.trace.attempts == 1
+    assert [hit.memory_id for hit in outcome.hits] == ["m-1"]
+
+
+def test_a_non_numeric_score_keeps_the_hit_but_drops_the_score() -> None:
+    """The text is the evidence; the score is only a ranking hint."""
+    item = recall_item()
+    item.scores = SimpleNamespace(final="not-a-number")
+
+    hit = _to_hit(item)
+
+    assert hit is not None
+    assert hit.score is None
+    assert hit.text
+
+
+def test_non_mapping_metadata_is_dropped_without_losing_the_hit() -> None:
+    item = recall_item()
+    item.metadata = ["not", "a", "mapping"]
+
+    hit = _to_hit(item)
+
+    assert hit is not None
+    assert hit.metadata == {}
+
+
+def test_a_string_tag_list_is_not_exploded_into_characters() -> None:
+    """`list("service:x")` would yield twelve one-character tags."""
+    item = recall_item()
+    item.tags = "service:checkout-api"
+
+    hit = _to_hit(item)
+
+    assert hit is not None
+    assert hit.tags == []
+
+
+def test_a_malformed_only_recall_reports_no_match_rather_than_degraded() -> None:
+    """Rejecting every row is an empty recall, not an outage. Say which."""
+    client = FakeHindsight(recall_results=[None, None])
+    store = make_store(client)
+
+    outcome = store.recall("checkout latency", tags=["service:checkout-api"])
+
+    assert outcome.trace.success is True
+    assert outcome.trace.no_match is True
+    assert outcome.trace.error_code is ErrorCode.NONE
