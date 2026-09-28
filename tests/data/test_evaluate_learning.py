@@ -17,6 +17,9 @@ from scripts.evaluate_learning import (
 )
 from src.memory.schema import EventType, MemoryEvent
 
+PRIMARY_MODEL = "openai/gpt-oss-120b"
+FALLBACK_MODEL = "qwen/qwen3.8-27b"
+
 
 def _incident(
     incident_id: str,
@@ -176,6 +179,7 @@ def _record(
     fix: bool = True,
     grounded: bool = True,
     cutoff: int = 2,
+    model: str = PRIMARY_MODEL,
 ) -> dict:
     return {
         "status": status,
@@ -184,7 +188,8 @@ def _record(
         "grounded": grounded,
         "cutoff": cutoff,
         "steps": 4,
-        "used_fallback": False,
+        "used_fallback": model != PRIMARY_MODEL,
+        "model_used": model,
     }
 
 
@@ -288,13 +293,19 @@ def test_real_eval_pairs_never_leak_and_always_have_a_fix_to_hit() -> None:
 # --------------------------------------------------------------------------
 # Cache
 # --------------------------------------------------------------------------
-def _cache_record(status: str, incident_id: str = "INC-A3", cutoff: int = 2) -> dict:
+def _cache_record(
+    status: str,
+    incident_id: str = "INC-A3",
+    cutoff: int = 2,
+    model: str = PRIMARY_MODEL,
+) -> dict:
     return {
         "mode": "curve",
         "cutoff": cutoff,
         "memory_mode": "on",
         "incident_id": incident_id,
         "status": status,
+        "model_used": model,
     }
 
 
@@ -324,6 +335,34 @@ def test_the_latest_completed_record_wins(tmp_path) -> None:
     cached = load_cache(path)
     assert len(cached) == 1
     assert next(iter(cached.values()))["cause_hit"] is True
+
+
+def test_a_fallback_run_is_not_a_cache_hit_for_the_primary(tmp_path) -> None:
+    """A curve must not mix models.
+
+    Whether the primary gets rate-limited is provider weather. Reusing a
+    fallback run for a primary slot would put two models in one curve and make
+    the shape partly noise, so the lookup has to miss and re-run.
+    """
+    from scripts.evaluate_learning import append_cache, cached_curve_run, load_cache
+
+    path = tmp_path / "eval.jsonl"
+    append_cache(path, _cache_record("completed", model=FALLBACK_MODEL))
+    cached = load_cache(path)
+
+    assert cached_curve_run(cached, 2, "on", "INC-A3", PRIMARY_MODEL) is None
+    assert cached_curve_run(cached, 2, "on", "INC-A3", FALLBACK_MODEL) is not None
+
+
+def test_metrics_report_which_models_produced_the_curve() -> None:
+    """A partly-fallen-back curve must say so rather than look uniform."""
+    records = [
+        _record(model=PRIMARY_MODEL),
+        _record(model=FALLBACK_MODEL),
+    ]
+    metrics = compute_metrics(records)
+    assert metrics["models_used"] == [PRIMARY_MODEL, FALLBACK_MODEL]
+    assert metrics["fallback_runs"] == 1
 
 
 def test_a_missing_cache_file_is_not_an_error(tmp_path) -> None:
