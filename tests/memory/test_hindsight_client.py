@@ -13,8 +13,14 @@ from typing import Any
 import pytest
 
 from src.memory.hindsight_client import HindsightMemoryStore
+from src.memory.interface import RecallHit
 from src.memory.trace import ErrorCode, MemoryMode
 from tests.conftest import make_event, recall_item
+
+
+def store_hit(item: Any) -> RecallHit:
+    """Normalize a fake provider result the same way the adapter does."""
+    return HindsightMemoryStore._to_hit(item)
 
 
 class ApiError(Exception):
@@ -243,13 +249,154 @@ def test_recall_does_not_retry_auth_failure() -> None:
 
 
 def test_recall_applies_client_side_limit() -> None:
-    client = FakeHindsight(recall_results=[recall_item(memory_id=f"m-{i}") for i in range(10)])
+    client = FakeHindsight(
+        recall_results=[
+            recall_item(
+                memory_id=f"m-{i}",
+                text=f"checkout-api latency incident INC-20{i:02d} after a ledger deploy",
+                metadata={"incident_id": f"INC-20{i:02d}", "event_type": "POSTMORTEM"},
+            )
+            for i in range(10)
+        ]
+    )
     store = make_store(client)
 
     outcome = store.recall("checkout latency", limit=3)
 
     assert len(outcome.hits) == 3
     assert outcome.trace.hit_count == 3
+
+
+def test_recall_dedupes_a_document_against_its_derived_observation() -> None:
+    """Hindsight returns each retained document twice: once as the document, once as
+    its own paraphrase with no metadata. Only one copy should reach the caller, and
+    it should be the one that carries provenance."""
+    document = recall_item(
+        memory_id="doc-1",
+        text="Incident INC-1038 opened for checkout-api due to high p99 latency.",
+        metadata={"incident_id": "INC-1038", "event_type": "INCIDENT_OPEN"},
+    )
+    observation = recall_item(
+        memory_id="obs-1",
+        text="Incident INC-1038 was opened for checkout-api due to high p99 latency.",
+        metadata={},
+        tags=["service:checkout-api", "event_type:incident_open"],
+    )
+    observation.document_id = None
+
+    # The derived observation ranks first here; the document must still win.
+    client = FakeHindsight(recall_results=[observation, document])
+    store = make_store(client)
+
+    outcome = store.recall("checkout latency")
+
+    assert len(outcome.hits) == 1
+    assert outcome.hits[0].memory_id == "doc-1"
+    assert outcome.hits[0].metadata
+
+
+def test_recall_keeps_distinct_event_types_for_the_same_incident() -> None:
+    client = FakeHindsight(
+        recall_results=[
+            recall_item(
+                memory_id="open-1",
+                text="Incident INC-1038 opened for checkout-api due to high p99 latency.",
+                metadata={"incident_id": "INC-1038", "event_type": "INCIDENT_OPEN"},
+            ),
+            recall_item(
+                memory_id="res-1",
+                text="Incident INC-1038 was resolved by scaling the consumer group.",
+                metadata={"incident_id": "INC-1038", "event_type": "RESOLUTION"},
+            ),
+        ]
+    )
+    store = make_store(client)
+
+    outcome = store.recall("checkout latency")
+
+    assert {hit.memory_id for hit in outcome.hits} == {"open-1", "res-1"}
+
+
+def test_recall_keeps_unattributed_memories() -> None:
+    """Hindsight's own derived memories are legitimate memory even without provenance."""
+    observation = recall_item(memory_id="obs-1", text="Latency after a ledger deploy.", metadata={})
+    observation.document_id = None
+    client = FakeHindsight(recall_results=[observation])
+    store = make_store(client)
+
+    outcome = store.recall("checkout latency")
+
+    assert len(outcome.hits) == 1
+    assert outcome.hits[0].metadata == {}
+
+
+def test_event_type_falls_back_to_the_scoping_tag() -> None:
+    """Derived observations lose metadata but keep the tags of their source memory."""
+    observation = recall_item(memory_id="obs-1", metadata={}, tags=["event_type:resolution"])
+    observation.document_id = None
+    hit = store_hit(observation)
+    assert hit.event_type == "resolution"
+
+
+def test_metadata_event_type_wins_over_the_tag() -> None:
+    item = recall_item(metadata={"event_type": "POSTMORTEM"}, tags=["event_type:postmortem"])
+    assert store_hit(item).event_type == "POSTMORTEM"
+
+
+def test_recall_dedupes_a_runbook_against_its_derived_observation() -> None:
+    """Runbook memories are identified by runbook id, not by the synthetic incident id."""
+    document = recall_item(
+        memory_id="rb-doc",
+        text=(
+            "Validated runbook RB-014 for root cause RC-001 to resolve payment ledger issues "
+            "by scaling the consumer group."
+        ),
+        metadata={
+            "incident_id": "RUNBOOK-RB-014",
+            "event_type": "RUNBOOK_ENTRY",
+            "runbook_id": "RB-014",
+        },
+        tags=["service:checkout-api", "event_type:runbook_entry"],
+    )
+    observation = recall_item(
+        memory_id="rb-obs",
+        text=(
+            "Validated runbook RB-014 for root cause RC-001 to resolve payment ledger issues "
+            "by scaling the consumer group."
+        ),
+        metadata={},
+        tags=["service:checkout-api", "event_type:runbook_entry"],
+    )
+    observation.document_id = None
+
+    client = FakeHindsight(recall_results=[observation, document])
+    store = make_store(client)
+
+    outcome = store.recall("checkout latency")
+
+    assert len(outcome.hits) == 1
+    assert outcome.hits[0].memory_id == "rb-doc"
+
+
+def test_a_resolution_mentioning_a_runbook_is_not_confused_with_the_runbook() -> None:
+    resolution = recall_item(
+        memory_id="res-1",
+        text="Incident INC-1024 was resolved following runbook RB-014.",
+        metadata={"incident_id": "INC-1024", "event_type": "RESOLUTION"},
+        tags=["event_type:resolution"],
+    )
+    runbook = recall_item(
+        memory_id="rb-doc",
+        text="Validated runbook RB-014 for root cause RC-001.",
+        metadata={"incident_id": "RUNBOOK-RB-014", "event_type": "RUNBOOK_ENTRY"},
+        tags=["event_type:runbook_entry"],
+    )
+    client = FakeHindsight(recall_results=[resolution, runbook])
+    store = make_store(client)
+
+    outcome = store.recall("checkout latency")
+
+    assert {hit.memory_id for hit in outcome.hits} == {"res-1", "rb-doc"}
 
 
 def test_recall_defaults_to_all_tag_matching() -> None:
@@ -272,6 +419,30 @@ def test_recall_without_tags_sends_no_tag_filter_at_all() -> None:
     kwargs = client.calls_named("recall")[0]
     assert "tags" not in kwargs
     assert "tags_match" not in kwargs
+
+
+def test_recall_uses_the_configured_threshold_by_default() -> None:
+    client = FakeHindsight()
+    store = make_store(client)
+
+    store.recall("checkout latency")
+
+    kwargs = client.calls_named("recall")[0]
+    assert kwargs["min_scores"] == {"final": store.min_final_score}
+
+
+def test_recall_min_score_override_reaches_the_provider_and_the_trace() -> None:
+    """An exact tag scope is its own relevance signal, so the caller can opt out."""
+    client = FakeHindsight()
+    store = make_store(client)
+
+    outcome = store.recall(
+        "checkout latency", tags=["service:checkout-api"], min_score=0.0
+    )
+
+    kwargs = client.calls_named("recall")[0]
+    assert kwargs["min_scores"] == {"final": 0.0}
+    assert outcome.trace.min_score == 0.0
 
 
 def test_recall_omits_tag_filter_when_scope_is_empty() -> None:

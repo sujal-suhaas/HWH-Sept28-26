@@ -100,3 +100,37 @@ def test_runbook_events_are_scoped_to_runbook_entries() -> None:
             assert "event_type:runbook_entry" in event.tags()
             assert event.runbook_id
             assert event.outcome is Outcome.CONFIRMED
+
+
+def test_a_runbook_is_retained_once_per_service_it_validated() -> None:
+    """A runbook validated for two services must be findable from either one."""
+    events = build_seed_events()
+    runbooks = [e for e in events if e.event_type is EventType.RUNBOOK_ENTRY]
+
+    # Exactly one event per (runbook, service), with a distinct document id.
+    pairs = [(e.runbook_id, e.service) for e in runbooks]
+    assert len(pairs) == len(set(pairs)), "duplicate runbook events for the same service"
+    documents = [e.document_id_or_default() for e in runbooks]
+    assert len(documents) == len(set(documents))
+    assert all(service for _, service in pairs)
+
+    services_per_runbook: dict[str, set[str]] = {}
+    for runbook_id, service in pairs:
+        services_per_runbook.setdefault(runbook_id or "?", set()).add(service or "?")
+
+    # The defect this guards: a runbook used by several services was tagged with
+    # only the first one, so a service-scoped lookup could never find it.
+    multi_service = {rb: svc for rb, svc in services_per_runbook.items() if len(svc) > 1}
+    assert multi_service, "expected at least one runbook validated for multiple services"
+
+
+def test_every_resolution_runbook_has_a_matching_service_scoped_runbook_event() -> None:
+    """Scoping a runbook lookup by service must actually find the runbook."""
+    events = build_seed_events()
+    tagged = {
+        (e.runbook_id, e.service) for e in events if e.event_type is EventType.RUNBOOK_ENTRY
+    }
+    for event in events:
+        if event.event_type is not EventType.RESOLUTION or not event.runbook_id:
+            continue
+        assert (event.runbook_id, event.service) in tagged

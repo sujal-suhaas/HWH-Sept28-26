@@ -100,11 +100,14 @@ class MemoryEvent(BaseModel):
         return self.document_id or f"{self.incident_id}:{self.event_type.value.lower()}"
 
 
-def runbook_tags(service: str | None, incident_type: str | None) -> list[str]:
-    """Scoping tags for a runbook lookup."""
+def runbook_tags(service: str | None = None) -> list[str]:
+    """Scoping tags for a runbook lookup.
+
+    Deliberately does not scope by incident type: a ``RUNBOOK_ENTRY`` event is
+    keyed by root cause and service, and never carries an ``incident_type`` tag.
+    Adding one would make every runbook lookup return nothing.
+    """
     tags = ["event_type:runbook_entry"]
     if service:
         tags.append(f"service:{service}")
-    if incident_type:
-        tags.append(f"incident_type:{incident_type.lower()}")
     return tags

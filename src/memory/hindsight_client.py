@@ -14,6 +14,7 @@ Provider failures never raise. They are reported through
 from __future__ import annotations
 
 import logging
+import re
 import time
 from typing import Any
 
@@ -39,8 +40,69 @@ _NOT_FOUND_STATUS = {404}
 _VALIDATION_STATUS = {400, 422}
 
 _DEFAULT_TAGS_MATCH = "all"
+# Measured on the seeded bank: budget/max_tokens bound how many *tokens* come
+# back, not how many results. "mid" already returns the full matching set, so a
+# larger budget buys nothing and costs latency.
 _RECALL_BUDGET = "mid"
 _RECALL_MAX_TOKENS = 4096
+
+_INCIDENT_ID_RE = re.compile(r"(?:INC|RUNBOOK)-[A-Za-z0-9]+")
+_RUNBOOK_ID_RE = re.compile(r"\b(RB-\d+)\b")
+
+
+def _provenance_rank(hit: RecallHit) -> int:
+    """Higher means better provenance. Our retained documents carry metadata."""
+    return (2 if hit.metadata else 0) + (1 if hit.document_id else 0)
+
+
+def _memory_key(hit: RecallHit) -> tuple[str, str]:
+    """Identify the memory a hit came from, across Hindsight's derived facts.
+
+    Hindsight returns each retained document twice: once as the document itself
+    (``type="world"``, with metadata and a document_id) and once as its own
+    paraphrased observation (``type="observation"``, no metadata). Both carry an
+    identifier in the text and the event type in the tags, so that pair is the
+    stable identity.
+    """
+    event_type = (hit.event_type or "").lower()
+
+    if event_type == "runbook_entry":
+        # A runbook's identity is its runbook id, not the synthetic
+        # RUNBOOK-<id> incident id. Resolutions also mention a runbook id in
+        # their text, so this branch must stay scoped to runbook entries.
+        runbook_id = hit.runbook_id
+        if not runbook_id:
+            match = _RUNBOOK_ID_RE.search(hit.text)
+            runbook_id = match.group(1) if match else hit.text[:48].lower()
+        return (f"RUNBOOK-{runbook_id}".upper(), event_type)
+
+    match = _INCIDENT_ID_RE.search(hit.text)
+    incident = hit.incident_id or (match.group(0) if match else hit.text[:48].lower())
+    return (incident.upper(), event_type)
+
+
+def _dedupe_hits(hits: list[RecallHit]) -> list[RecallHit]:
+    """Keep one hit per memory, preferring the version with provenance.
+
+    ``ponytail:`` collapses multiple chunks of the same document to one. That is
+    the right trade for a prompt budget; revisit if chunk-level detail matters.
+    """
+    best: dict[tuple[str, str], RecallHit] = {}
+    for hit in hits:
+        key = _memory_key(hit)
+        current = best.get(key)
+        if current is None or _provenance_rank(hit) > _provenance_rank(current):
+            best[key] = hit
+
+    ordered: list[RecallHit] = []
+    seen: set[tuple[str, str]] = set()
+    for hit in hits:
+        key = _memory_key(hit)
+        if key in seen:
+            continue
+        seen.add(key)
+        ordered.append(best[key])
+    return ordered
 
 
 def _classify(exc: BaseException) -> tuple[bool, ErrorCode]:
@@ -241,9 +303,17 @@ class HindsightMemoryStore:
         tags: list[str] | None = None,
         tags_match: str = _DEFAULT_TAGS_MATCH,
         limit: int = 5,
+        min_score: float | None = None,
     ) -> RecallOutcome:
         started_at = utcnow()
         scope_tags = list(tags or [])
+        # A similarity threshold is only meaningful over a broad scope. When the
+        # tag scope is itself the relevance signal - every runbook validated for
+        # one service, for example - a threshold wrongly reports "no match" for
+        # memories that are relevant by construction. Measured: RB-014 is the only
+        # runbook validated for checkout-api, and it scores 0.0 against the query
+        # "checkout-api latency", so the default threshold hid it completely.
+        threshold = self.min_final_score if min_score is None else min_score
 
         def _do_recall() -> Any:
             kwargs: dict[str, Any] = {
@@ -255,7 +325,7 @@ class HindsightMemoryStore:
                 # Hindsight returns low-relevance neighbours rather than an
                 # empty list; this threshold is what makes "no relevant
                 # memory found" an honest statement.
-                "min_scores": {"final": self.min_final_score},
+                "min_scores": {"final": threshold},
             }
             if scope_tags:
                 # tags_match="all" is essential: the SDK default ("any")
@@ -277,14 +347,14 @@ class HindsightMemoryStore:
                     attempts,
                     query=query,
                     tags=scope_tags,
-                    min_score=self.min_final_score,
+                    min_score=threshold,
                     no_match=True,
                 ),
             )
             return outcome
 
         hits = [self._to_hit(item) for item in (getattr(result, "results", None) or [])]
-        hits = hits[:limit]
+        hits = _dedupe_hits(hits)[:limit]
         provider_trace = getattr(result, "trace", None)
         trace = MemoryTrace.build(
             operation=MemoryOperation.RECALL,
@@ -296,7 +366,7 @@ class HindsightMemoryStore:
             hit_count=len(hits),
             query=query,
             tags=scope_tags,
-            min_score=self.min_final_score,
+            min_score=threshold,
             no_match=not hits,
             provider_trace=provider_trace,
         )

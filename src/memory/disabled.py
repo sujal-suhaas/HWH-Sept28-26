@@ -44,6 +44,7 @@ class DisabledMemoryStore:
         tags: list[str] | None = None,
         tags_match: str = "all",
         limit: int = 5,
+        min_score: float | None = None,
     ) -> RecallOutcome:
         trace = self._trace(MemoryOperation.RECALL)
         trace.query = query
