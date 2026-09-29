@@ -164,6 +164,8 @@ export function createMockIncidentClient(options: MockClientOptions = {}): Incid
         proposed_diagnosis: null,
         proposed_resolution: null,
         operator_outcome: null,
+        diagnosis_outcome: null,
+        resolution_outcome: null,
         operator: null,
         root_cause_id: null,
         validated_runbook_id: null,
@@ -257,11 +259,20 @@ export function createMockIncidentClient(options: MockClientOptions = {}): Incid
         },
       ]
 
+      // Mirrors src/api/lifecycle.py: the outcome is recorded against its own
+      // kind, so confirming the resolution cannot reset the diagnosis card.
+      const DIAGNOSIS_KINDS = ['DIAGNOSIS_CONFIRMED', 'DIAGNOSIS_REJECTED', 'OPERATOR_CORRECTION']
+      const isDiagnosis = DIAGNOSIS_KINDS.includes(feedback.feedback_type)
+      const settlesNothing = feedback.feedback_type === 'INCONCLUSIVE'
+
       const updated: IncidentResponse = {
         ...incident,
         state: FEEDBACK_STATE[feedback.feedback_type],
         timeline: [...incident.timeline, ...entries],
         operator_outcome: feedback.feedback_type,
+        diagnosis_outcome: isDiagnosis ? feedback.feedback_type : incident.diagnosis_outcome,
+        resolution_outcome:
+          !isDiagnosis && !settlesNothing ? feedback.feedback_type : incident.resolution_outcome,
         operator: feedback.operator,
         root_cause_id: feedback.root_cause_id ?? incident.root_cause_id,
         validated_runbook_id: feedback.validated_runbook_id ?? incident.validated_runbook_id,

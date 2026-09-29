@@ -100,6 +100,8 @@ export interface IncidentResponse {
   proposed_resolution: Proposal | null
 
   operator_outcome: FeedbackType | null
+  diagnosis_outcome: FeedbackType | null
+  resolution_outcome: FeedbackType | null
   operator: string | null
   root_cause_id: string | null
   validated_runbook_id: string | null

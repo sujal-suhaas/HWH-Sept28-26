@@ -9,6 +9,7 @@ import { MemoryInspector } from './components/MemoryInspector'
 import { ProposalCard } from './components/ProposalCard'
 import { createLiveIncidentClient } from './live/incidentClient'
 import { createMockIncidentClient } from './mock/incidentClient'
+import { outcomeForProposal } from './proposalState'
 import type { IncidentClient } from './incidentClient'
 import type {
   AlertPayload,
@@ -335,7 +336,7 @@ export default function App() {
               <ProposalCard
                 key={proposal.kind}
                 proposal={proposal}
-                operatorOutcome={incident.operator_outcome}
+                outcome={outcomeForProposal(incident, proposal)}
               />
             ))}
 

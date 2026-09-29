@@ -91,9 +91,23 @@ export function proposalDisplayState(
   return table[operatorOutcome] ?? pending(proposal)
 }
 
+/**
+ * The outcome that governs a given proposal: its own kind's, not the latest one.
+ *
+ * `operator_outcome` is only the most recent feedback of any kind, so using it
+ * for both cards meant confirming the resolution reset the diagnosis card to
+ * "proposed" on an already-resolved incident.
+ */
+export function outcomeForProposal(
+  incident: IncidentResponse,
+  proposal: Proposal,
+): FeedbackType | null {
+  return proposal.kind === 'diagnosis' ? incident.diagnosis_outcome : incident.resolution_outcome
+}
+
 export function proposalDisplayStateFor(
   incident: IncidentResponse,
   proposal: Proposal,
 ): ProposalDisplayState {
-  return proposalDisplayState(proposal, incident.operator_outcome)
+  return proposalDisplayState(proposal, outcomeForProposal(incident, proposal))
 }
