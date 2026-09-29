@@ -4,13 +4,20 @@ The content phase is complete when every row has a real, public, working URL.
 
 | Deliverable | Owner | URL |
 | --- | --- | --- |
-| Article | Member A | |
+| Article | Member A | https://medium.com/@sujalsuhaas2007/our-hindsight-agent-cited-the-fix-but-never-named-the-cause-252c67697d06 |
 | LinkedIn post | Member A | |
 | Reddit post | Member A | |
 | Article | Member B | |
 | LinkedIn post | Member B | |
 | Reddit post | Member B | |
 | Team video (YouTube) | Team | |
+
+## Verification status
+
+Member A's article URL was supplied by Member A and recorded here. It has **not** been verified
+independently: Medium returns 403 to plain HTTP fetches and blocks this development environment's IP
+outright, so neither a request nor a real browser can load it from here. The checks below still need
+a human to run them in an incognito window.
 
 ## Before filling a row
 
