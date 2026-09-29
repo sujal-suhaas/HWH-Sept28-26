@@ -6,8 +6,8 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { proposalDisplayState } from './proposalState'
-import type { FeedbackType, Proposal } from './types'
+import { outcomeForProposal, proposalDisplayState, proposalDisplayStateFor } from './proposalState'
+import type { FeedbackType, IncidentResponse, Proposal } from './types'
 
 const diagnosis: Proposal = {
   kind: 'diagnosis',
@@ -80,5 +80,49 @@ describe('proposalDisplayState', () => {
       expect(state.label).toBe('inconclusive — no outcome confirmed')
       expect(state.awaitingOperator).toBe(false)
     }
+  })
+})
+
+describe('outcomeForProposal', () => {
+  // Found on a live run: after the operator confirmed both the diagnosis and the
+  // resolution, the resolved incident showed the diagnosis card back at
+  // "proposed". `operator_outcome` holds only the most recent feedback, so the
+  // resolution confirmation had overwritten the diagnosis one.
+  const incident = (over: Partial<IncidentResponse>): IncidentResponse =>
+    ({
+      incident_id: 'INC-9001',
+      state: 'RESOLVED',
+      operator_outcome: 'RESOLUTION_CONFIRMED',
+      diagnosis_outcome: 'DIAGNOSIS_CONFIRMED',
+      resolution_outcome: 'RESOLUTION_CONFIRMED',
+      ...over,
+    }) as IncidentResponse
+
+  it('reads the diagnosis slot for a diagnosis', () => {
+    expect(outcomeForProposal(incident({}), diagnosis)).toBe('DIAGNOSIS_CONFIRMED')
+  })
+
+  it('reads the resolution slot for a resolution', () => {
+    expect(outcomeForProposal(incident({}), resolution)).toBe('RESOLUTION_CONFIRMED')
+  })
+
+  it('does not fall back to the latest outcome when a slot is empty', () => {
+    // A rejected-then-failed incident: the diagnosis slot is set, the resolution
+    // slot is not. Reading `operator_outcome` would give the wrong answer here.
+    const rejected = incident({
+      operator_outcome: 'RESOLUTION_FAILED',
+      diagnosis_outcome: 'DIAGNOSIS_REJECTED',
+      resolution_outcome: 'RESOLUTION_FAILED',
+    })
+    expect(outcomeForProposal(rejected, diagnosis)).toBe('DIAGNOSIS_REJECTED')
+  })
+
+  it('leaves the diagnosis card alone when only the resolution was settled', () => {
+    const onlyResolution = incident({
+      diagnosis_outcome: null,
+      resolution_outcome: 'RESOLUTION_CONFIRMED',
+    })
+    expect(proposalDisplayStateFor(onlyResolution, diagnosis).label).toBe('proposed')
+    expect(proposalDisplayStateFor(onlyResolution, resolution).label).toBe('confirmed by operator')
   })
 })

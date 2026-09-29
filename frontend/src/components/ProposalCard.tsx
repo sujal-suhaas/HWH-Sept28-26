@@ -23,18 +23,17 @@ const TONE_CLASSES: Record<string, string> = {
  * A proposal is never an outcome.
  *
  * The card exists to make the operator-confirmation boundary visible. The
- * displayed state comes from the incident's operator outcome, not from the
- * agent's own `status` field, so a confirmed diagnosis stops saying "awaiting
- * confirmation" and a failed resolution never reads as a validated fix.
+ * displayed state comes from the incident's outcome for this proposal's own
+ * kind, not from the agent's own `status` field, so a confirmed diagnosis stops
+ * saying "awaiting confirmation" and a failed resolution never reads as a
+ * validated fix.
+ *
+ * It must be the per-kind outcome, not `operator_outcome`: that field only holds
+ * the most recent feedback, so confirming the resolution used to reset the
+ * diagnosis card to "proposed".
  */
-export function ProposalCard({
-  proposal,
-  operatorOutcome,
-}: {
-  proposal: Proposal
-  operatorOutcome: FeedbackType | null
-}) {
-  const state = proposalDisplayState(proposal, operatorOutcome)
+export function ProposalCard({ proposal, outcome }: { proposal: Proposal; outcome: FeedbackType | null }) {
+  const state = proposalDisplayState(proposal, outcome)
   const citations = proposal.cited_memory_ids
 
   return (

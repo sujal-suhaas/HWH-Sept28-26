@@ -21,12 +21,12 @@ function diagnosis(overrides: Partial<Proposal> = {}): Proposal {
 
 describe('ProposalCard root cause chip', () => {
   it('shows the cause the agent named', () => {
-    render(<ProposalCard proposal={diagnosis({ root_cause_id: 'RC-007' })} operatorOutcome={null} />)
+    render(<ProposalCard proposal={diagnosis({ root_cause_id: 'RC-007' })} outcome={null} />)
     expect(screen.getByTestId('proposal-root-cause').textContent).toBe('RC-007')
   })
 
   it('shows no cause chip when the agent named none', () => {
-    render(<ProposalCard proposal={diagnosis()} operatorOutcome={null} />)
+    render(<ProposalCard proposal={diagnosis()} outcome={null} />)
     expect(screen.queryByTestId('proposal-root-cause')).toBeNull()
   })
 
@@ -34,7 +34,7 @@ describe('ProposalCard root cause chip', () => {
     render(
       <ProposalCard
         proposal={diagnosis({ root_cause_id: 'RC-007', runbook_id: 'RB-018' })}
-        operatorOutcome={null}
+        outcome={null}
       />,
     )
     expect(screen.getByTestId('proposal-root-cause').textContent).toBe('RC-007')
@@ -42,7 +42,7 @@ describe('ProposalCard root cause chip', () => {
   })
 
   it('still reads as awaiting confirmation while no outcome is recorded', () => {
-    render(<ProposalCard proposal={diagnosis({ root_cause_id: 'RC-007' })} operatorOutcome={null} />)
+    render(<ProposalCard proposal={diagnosis({ root_cause_id: 'RC-007' })} outcome={null} />)
     expect(screen.getByTestId('proposal-state').textContent).toBe('proposed')
     expect(screen.getByText(/Awaiting operator confirmation/).textContent).toMatch(
       /Awaiting operator confirmation/,
@@ -58,7 +58,7 @@ describe('ProposalCard root cause chip', () => {
           root_cause_id: null,
           runbook_id: 'RB-018',
         })}
-        operatorOutcome="RESOLUTION_FAILED"
+        outcome="RESOLUTION_FAILED"
       />,
     )
     const state = screen.getByTestId('proposal-state')
