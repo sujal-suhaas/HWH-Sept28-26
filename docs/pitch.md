@@ -225,6 +225,9 @@ each would have cost us the thing that makes this project defensible: **depth on
 
 ## 9. Judge Q&A
 
+Short answers for the stage. For the deep version — 54 questions on architecture and edge cases, with
+the mechanism and the limits in each answer — see [`docs/qa.md`](qa.md).
+
 **"Isn't this just RAG over a vector store?"**
 No, and the difference is the write path. A retrieval system reads a corpus someone else maintains.
 Here the corpus is *created by the incident workflow itself*. The last demo step is the agent getting
