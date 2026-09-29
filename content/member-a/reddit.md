@@ -44,7 +44,7 @@ Honest limits: the evaluation is on synthetic incident history we generated, one
 cutoff — a ladder, not a rate. There's no memory expiry, so an operator who confirms a wrong cause
 in a hurry creates a wrong precedent that stays.
 
-Full write-up with the code and the measured table: {{ARTICLE_URL}}
+Full write-up with the code and the measured table: https://medium.com/@sujalsuhaas2007/our-hindsight-agent-cited-the-fix-but-never-named-the-cause-252c67697d06
 
 Hindsight is the memory layer: https://github.com/vectorize-io/hindsight
 ```
