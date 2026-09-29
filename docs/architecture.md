@@ -46,6 +46,48 @@ Verification basis for everything in the "Hindsight facts" section:
                                                  └─────────┘
 ```
 
+The same map with the Memory Bank and the confirmation boundary made explicit:
+
+```mermaid
+flowchart TB
+    alert["Alert payload"] --> api["FastAPI · src/api"]
+
+    api --> sqlite[("SQLite<br/>incident state · timeline · outcomes<br/><b>source of truth</b>")]
+    api --> loop["Agent loop · src/agent<br/>Groq openai/gpt-oss-120b"]
+    loop -. "retryable failure only" .-> fallback["qwen/qwen3.8-27b"]
+
+    loop --> tools["Tools — allowlisted, validated, repaired once"]
+    tools --> t1["recall_similar_incidents"]
+    tools --> t2["lookup_runbook"]
+    tools --> t3["get_service_map"]
+
+    t1 --> store["MemoryStore — our interface"]
+    t2 --> store
+    t3 --> store
+
+    loop -. "propose_diagnosis / propose_resolution<br/>status: proposed — never authoritative" .-> sqlite
+
+    api --> fb["Operator feedback"]
+    fb --> lifecycle["Backend lifecycle"]
+    lifecycle ==>|"authoritative retain"| store
+
+    store --> client["hindsight_client.py<br/>only file importing the SDK"]
+    client --> cloud["Hindsight Cloud"]
+    cloud --> bank[("Memory Bank<br/>dejaops-prod")]
+    bank -. "tags scope recall · metadata is context" .-> store
+
+    switch{{"memory_mode"}} -.->|"ON: recall + retain · OFF: neither"| store
+```
+
+Two things this picture is meant to make obvious:
+
+- **The Memory Bank is one container**, `dejaops-prod`, behind exactly one adapter file. Nothing
+  else in the application imports the Hindsight SDK, which is what lets memory be switched off, or
+  the provider swapped, without touching the agent.
+- **There are two arrows into the store, and only one of them is authoritative.** The agent loop
+  reaches it through read-only tools. The write path runs through the backend lifecycle, which is
+  the only thing that may create a confirmed memory. A proposal never becomes one.
+
 ### Module responsibilities
 
 | Path | Responsibility |
