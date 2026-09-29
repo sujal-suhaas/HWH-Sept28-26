@@ -31,13 +31,16 @@ The content phase is complete when every row has a real, public, working URL.
 | --- | --- | --- |
 | Member A article | [`member-a/article.md`](member-a/article.md) | ~1,600 words |
 | Member A LinkedIn | [`member-a/linkedin.md`](member-a/linkedin.md) | 793 / 800 |
+| Member A Reddit | [`member-a/reddit.md`](member-a/reddit.md) | link post, title + body |
 | Member B article | [`member-b/article.md`](member-b/article.md) | ~1,350 words |
 | Member B LinkedIn | [`member-b/linkedin.md`](member-b/linkedin.md) | 796 / 800 |
+| Member B Reddit | [`member-b/reddit.md`](member-b/reddit.md) | link post, title + body |
 | Video script | [`video/script.md`](video/script.md) | 3–4 min, 2 presenters |
 | Thumbnail prompt | [`video/thumbnail_prompt.md`](video/thumbnail_prompt.md) | 16:9 |
 
-Reddit posts are not drafted here. Each is a link post to the corresponding article, so the text
-depends on the article's final published URL and on the destination's current rules.
+Reddit posts are drafted as title + body per member. Each is a link post to the corresponding
+article, so replace `{{ARTICLE_URL}}` with the article's published URL before submitting — and
+confirm the destination currently allows a link post of this kind.
 
 ## Publishing order
 
