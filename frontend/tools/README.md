@@ -12,12 +12,14 @@ They need the app running (backend on `:8000`, vite on `:5173`) unless noted.
 | `capture-elements.mjs` | tight element shots from incidents already in the store | yes | no |
 | `capture-diagram.mjs` | the architecture diagram, rendered from `docs/architecture.md` | no | no |
 | `capture-terminal.mjs` | the seed + evaluation terminal image | no | no |
+| `record-demo.mjs` | the browser half of the demo video, plus a cue sheet | yes | yes |
 
 Run from `frontend/`:
 
 ```bash
 node tools/capture-diagram.mjs
 node tools/capture-terminal.mjs
+node tools/record-demo.mjs
 ```
 
 Output lands in `.screenshots/` (gitignored). Curated keepers are copied to `docs/images/`.
@@ -44,3 +46,13 @@ faked, because the script would have to be faked too.
 - `capture.mjs` selects a root cause before confirming, because `DIAGNOSIS_CONFIRMED` requires
   one and the `required` select otherwise blocks submission with no visible error.
 - `capture-elements.mjs` reuses incidents already in the store, so re-running it is free.
+- `record-demo.mjs` records one continuous browser session with `recordVideo` at 1920×1080
+  and writes `.screenshots/demo.webm` plus `.screenshots/demo-cue-sheet.md`. It covers
+  sections 1 and 3 of `content/video/script.md`; sections 2 and 4 are terminal screens that
+  Playwright cannot record. Each beat is padded to at least its scripted length — padding can
+  stretch a section but nothing can compress one, so a slow run overruns and the cue sheet
+  reports the real number. The curated copy of the cue sheet lives at
+  `content/video/cue-sheet.md`.
+- `record-demo.mjs` opens a **new** incident for the replay rather than clicking "Re-run with
+  memory". That button toggles the mode, so on a memory-ON incident it replays with memory
+  OFF — the opposite of what the beat is demonstrating.
