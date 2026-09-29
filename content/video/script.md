@@ -10,9 +10,24 @@ Fill in before recording:
 Every command, endpoint, and UI label below exists in the repository. Nothing here is invented
 terminal output — if a run differs, say what actually happened rather than the line written down.
 
-**Before you hit record:** seed the bank, confirm `/health` is 200, and delete `data/store/dejaops.db`
-so the incident list starts empty. Have the browser at `http://127.0.0.1:5173` and the terminal
-visible.
+**Before you hit record:** seed the bank, confirm the backend is up, and delete `data/store/dejaops.db`
+so the incident list starts empty.
+
+```bash
+# 1. Seed the bank. --reset drops and recreates it, so this is repeatable.
+uv run python scripts/seed_memory.py --bank dejaops-prod --reset
+# expect: retained=145 skipped=0 failed=0 total_known=145
+
+# 2. Backend. Reads HINDSIGHT_API_KEY and GROQ_API_KEY from the environment.
+uv run uvicorn src.api.app:app --host 127.0.0.1 --port 8000
+curl -s localhost:8000/health
+# expect: 200, memory_mode "on", bank_id "dejaops-prod"
+
+# 3. Frontend.
+cd frontend && npm run dev -- --host 127.0.0.1
+```
+
+Have the browser at `http://127.0.0.1:5173` and the terminal visible.
 
 ---
 
@@ -163,3 +178,20 @@ uv run python scripts/evaluate_learning.py --mode curve --limit 4 --memory-mode 
 - If the model doesn't propose on a run, say so and re-run rather than editing the footage to
   imply it did. That failure is real and was the subject of a fixed bug.
 - If the fallback model is used, the incident records which model answered. Mention it.
+
+## Endpoints the demo touches
+
+The UI drives all of these; none are typed by hand on camera. Listed so the presenter knows what
+the buttons are actually calling:
+
+| Endpoint | What the demo does |
+| --- | --- |
+| `POST /alerts` | **Open incident with memory** — normalizes the alert and runs the agent |
+| `POST /chat/{incident_id}` | a follow-up turn in the chat panel |
+| `POST /incidents/{id}/feedback` | **Record diagnosis confirmed** / **Record resolution confirmed** |
+| `GET /incidents/{id}` | refreshes the incident and its timeline |
+| `GET /incidents/{id}/memory-trace` | what the Memory Inspector renders |
+| `GET /health` | the startup check above |
+
+The feedback call is the only one that writes authoritative memory. Everything else on this list
+is a read, or a proposal that still needs a human.
