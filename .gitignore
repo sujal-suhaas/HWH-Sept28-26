@@ -44,3 +44,6 @@ Thumbs.db
 # Local UI captures, kept out of the tree. Real README screenshots are taken
 # from a live run and committed deliberately, not by a glob.
 .screenshots/
+
+# Working notes. Not documentation, and not something to publish by accident.
+.plan.md
