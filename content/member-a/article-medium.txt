@@ -1,6 +1,19 @@
 MEDIUM — MEMBER A
 
 ============================================================
+TOPICS (Medium allows 5; type each and pick from autocomplete)
+============================================================
+1. Artificial Intelligence
+2. AI Agents
+3. Machine Learning
+4. Software Engineering
+5. Debugging
+
+Swap 5 for "LLMs" if the story is being read mainly by model people rather than
+engineers. "Debugging" is the differentiator here: this article's hook is a bug
+that produced no error, and that tag reaches the people who find that interesting.
+
+============================================================
 TITLE FIELD
 ============================================================
 Our Hindsight agent cited the fix but never named the cause
