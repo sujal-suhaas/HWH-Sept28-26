@@ -1,0 +1,126 @@
+# I wrote 52 fake incidents so my agent would have something to remember
+
+A memory layer is easy to demo badly. You seed it with an incident, then ask about that incident, and the agent remembers it. The demo proves the storage works and nothing else — the answer was in the history because you put it there, and the alert text probably repeated it too.
+
+To show that memory *changes an answer*, you need a history where the answer is genuinely not in the alert. That turned out to be a data-design problem before it was an engineering one.
+
+---
+
+## The setup
+
+DejaOps is an incident-response agent for a fictional payments company. It recalls similar past incidents and validated runbooks from [Hindsight](https://github.com/vectorize-io/hindsight) before proposing a diagnosis, and an operator's confirmation is what writes new memory.
+
+The interesting question is not "can it recall" but "does recalling make it better". Answering that needs a history where the same alert shape has been seen more than once, and where the *outcome* of earlier occurrences is recorded — because that outcome, not the alert text, is what later runs can learn from.
+
+So I generated one: 52 incidents across eight weeks, seven services, nine root causes, nine runbooks, eight postmortems.
+
+---
+
+## The rule that makes the history teach
+
+The dataset's core trick is a per-pattern occurrence counter. The first time a pattern appears, nobody knows what it was. The second time, someone has a theory that doesn't hold. From the third time on, there's a confirmed cause and a promoted runbook:
+
+```python
+# The learning story: the first time a pattern appears the diagnosis is
+# inconclusive, the second time it is confirmed but no runbook has been
+# promoted yet, and from the third time on a validated runbook exists.
+if nth == 1:
+    outcome = "inconclusive"
+    runbook_id = None
+elif nth == 2:
+    outcome = "rejected"
+    runbook_id = None
+else:
+    outcome = "confirmed"
+    runbook_id = pattern["runbook_id"]
+```
+
+This is what makes the history *learnable* rather than merely *repetitive*. If every occurrence carried the answer, the agent would score well from the first one and memory would be doing nothing. Because the first occurrences carry nothing, a run at an early history cutoff has to guess, and a run at a later cutoff has an actual confirmed precedent to recall.
+
+The alert text never contains the root cause. It describes symptoms — a latency spike, consumer lag, a flapping cache. The cause lives in the diagnosis and resolution events, which is where memory is supposed to help.
+
+---
+
+## Hidden labels
+
+Every incident also carries a label block that is **not** part of what the agent sees:
+
+```json
+"INC-1001": {
+  "root_cause_id": "RC-007",
+  "validated_runbook_id": "RB-018",
+  "service": "fraud-scorer",
+  "severity": "p2",
+  "incident_type": "latency",
+  "is_noise": false
+}
+```
+
+Keeping these separate from the incident is the whole point. If the expected answer lived in the alert payload, it would end up in the prompt, and any evaluation would be measuring whether the model can copy a field rather than whether it can use memory. The labels exist to be scored against, not to be read.
+
+Some incidents are marked `is_noise`: real alerts that never had a clean cause. A history where everything resolves neatly is a history that teaches the agent to always be confident.
+
+---
+
+## The leak that made the numbers meaningless
+
+The first version of the evaluation had a bug that is worth describing because it's the kind you can't see in a passing test.
+
+To decide whether the agent proposed the right fix, the scorer needed to know what the correct runbook was. It looked for it in memory — which meant it could find the *evaluated incident's own* resolution. The agent's own confirmed answer was sitting in the recall pool, so the scorer was reading the answer key out of the same box the agent was searching.
+
+Every run scored well. The tests passed. The measurement was circular.
+
+The fix was to restrict the lookup to memories that existed *before* the incident being evaluated — `RUNBOOK_ENTRY` events only, never a resolution or correction. The evaluation now also asserts this invariant directly: a test checks that for every evaluated pair, the label is reachable from history and never from the incident itself.
+
+That test is the one I'd keep if I could keep only one. A circular evaluation doesn't fail, it just makes every number you produce worthless while looking healthy.
+
+---
+
+## What the demo actually shows
+
+The teach-then-replay demo uses an incident deliberately **absent** from the seeded history: a signing-key rotation that broke auth without an overlap window.
+
+| | before teach | after teach |
+| --- | --- | --- |
+| named root cause | none | correct |
+| Root Cause Hit@1 | false | true |
+| Validated Fix Hit@1 | false | true |
+| grounded in a cited memory | false | true |
+| memories cited | 0 | 2 |
+
+The "before" run is a real run against a bank with no matching history — not a mock, not a hardcoded response. It has nothing to recall, so it doesn't name a cause.
+
+Then an operator confirms the actual cause and the validated fix. That confirmation is what writes the memory. The same alert is replayed, and this time the agent recalls the incident it just learned from and names the cause.
+
+The demo is a single click because the incident carries the mode it ran in: the **Re-run with memory off/on** button replays the same alert the other way. Same alert, same model, same prompt — the only difference is whether memory is available.
+
+---
+
+## Seeding it into Hindsight
+
+The generator emits 145 memory events: 52 `INCIDENT_OPEN`, 52 `DIAGNOSIS`, 26 `RESOLUTION`, 8 `POSTMORTEM`, 7 `RUNBOOK_ENTRY`.
+
+The split matters. Only events with a confirmed outcome become resolution or runbook memory — the first-occurrence incidents produce an `inconclusive` diagnosis and nothing else. A memory bank seeded with 52 confident answers would teach the agent that every incident has a clean cause.
+
+Each event carries tags for recall scoping (`service:fraud-scorer`, `severity:p2`, `event_type:runbook_entry`) and metadata for context (`incident_id`, `runbook_id`, `outcome`). In Hindsight those are different tools: tags are what you filter by, metadata is what travels with a result. We never filter on metadata.
+
+Seeding is idempotent. Re-running reports `retained=145 skipped=0 failed=0` on a fresh bank, and skips what's already there on a second pass, so a half-finished seed can't silently double the history.
+
+---
+
+## What I'd do differently
+
+The history is eight weeks and 52 incidents. That's small enough to reason about by hand — which is genuinely why the annotation bug and the leak both got found — and far too small to say anything about scale. Real incident history is uneven, has long quiet periods, and contains duplicates that aren't really the same incident. Ours is tidy in ways real data isn't.
+
+The labels are also only as good as the generator. If the generator's notion of "the right root cause" is wrong, the evaluation is measuring agreement with my own fiction. Hidden labels stop the agent from seeing the answer; they don't make the answer true.
+
+If I were doing it again I'd seed the *first* occurrences from real postmortems rather than invented ones, so at least the shape of the problem is borrowed from reality even if the details aren't.
+
+---
+
+The part I'd pass on: if you're building anything that claims to learn, the dataset is the argument. A memory demo where the history contains the answer proves storage. A history where the early occurrences genuinely don't know, and the later ones do, is what lets you say something true about learning — and it has to be designed that way before you write the first line of the agent.
+
+[Hindsight](https://github.com/vectorize-io/hindsight) is what holds the memory here, and its
+[docs](https://docs.hindsight.vectorize.io/) were worth reading before designing the tag scheme.
+[This overview of agent memory](https://vectorize.io/what-is-agent-memory) is a good place to
+start on why the write path matters more than the read path.
