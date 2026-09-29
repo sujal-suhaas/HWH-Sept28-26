@@ -206,6 +206,12 @@ class IncidentResponse(BaseModel):
     proposed_resolution: Proposal | None = None
 
     operator_outcome: FeedbackType | None = None
+    # `operator_outcome` is only the most recent feedback of any kind, so
+    # confirming the resolution overwrote DIAGNOSIS_CONFIRMED and the diagnosis
+    # card silently reverted to "proposed" on an already-resolved incident. The
+    # two kinds are independent outcomes and each needs its own slot.
+    diagnosis_outcome: FeedbackType | None = None
+    resolution_outcome: FeedbackType | None = None
     operator: str | None = None
     root_cause_id: str | None = None
     validated_runbook_id: str | None = None

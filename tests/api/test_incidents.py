@@ -179,7 +179,9 @@ def test_an_invented_citation_is_rejected_and_the_run_grounds_nothing() -> None:
     assert incident["agent_status"] == "completed"
     assert incident["proposed_diagnosis"] is None
     assert incident["proposed_resolution"] is None
-    assert incident["state"] == IncidentState.DIAGNOSING.value
+    # The run ended, so the incident waits on a human - not on a process that has
+    # already stopped. See test_a_completed_run_that_proposed_nothing_does_not_wait_forever.
+    assert incident["state"] == IncidentState.WAITING_FOR_OPERATOR.value
     assert any(
         "cited_memory_ids contains ids that were not returned" in entry["detail"]
         for entry in incident["timeline"]
