@@ -438,3 +438,80 @@ def test_alert_to_resolution_is_a_complete_auditable_chain() -> None:
         EventType.RUNBOOK_ENTRY,
     ]
     assert all(event.incident_id == resolved["incident_id"] for event in store.events[:3])
+
+
+def test_confirming_the_resolution_does_not_reset_the_diagnosis_card() -> None:
+    """Found on a live run: the resolved incident showed the diagnosis as "proposed".
+
+    `operator_outcome` holds only the most recent feedback, so confirming the
+    resolution overwrote DIAGNOSIS_CONFIRMED and the diagnosis card fell back to
+    "proposed" on an incident that was already RESOLVED. The two kinds are
+    independent outcomes and each keeps its own slot.
+    """
+    with make_client(llm=FakeLLM(investigate_then_propose())) as client:
+        incident = open_incident(client)
+        submit(
+            client,
+            incident["incident_id"],
+            feedback_type="DIAGNOSIS_CONFIRMED",
+            root_cause_id=RC_KAFKA_LAG,
+        )
+        body = submit(
+            client,
+            incident["incident_id"],
+            feedback_type="RESOLUTION_CONFIRMED",
+            validated_fix="Scaled the ledger consumer group.",
+            validated_runbook_id=RB_LEDGER_CONSUMER_GROUP,
+        ).json()
+
+    assert body["state"] == "RESOLVED"
+    assert body["operator_outcome"] == "RESOLUTION_CONFIRMED"
+    # The point of the test: the diagnosis outcome survived the later feedback.
+    assert body["diagnosis_outcome"] == "DIAGNOSIS_CONFIRMED"
+    assert body["resolution_outcome"] == "RESOLUTION_CONFIRMED"
+
+
+def test_each_kind_of_outcome_lands_in_its_own_slot() -> None:
+    """Every feedback type settles exactly one kind, or neither."""
+    cases = [
+        ("DIAGNOSIS_CONFIRMED", "DIAGNOSIS_CONFIRMED", None),
+        ("DIAGNOSIS_REJECTED", "DIAGNOSIS_REJECTED", None),
+        ("OPERATOR_CORRECTION", "OPERATOR_CORRECTION", None),
+        ("RESOLUTION_FAILED", None, "RESOLUTION_FAILED"),
+        ("INCONCLUSIVE", None, None),
+    ]
+    for feedback_type, diagnosis, resolution in cases:
+        with make_client(llm=FakeLLM(investigate_then_propose())) as client:
+            incident = open_incident(client)
+            body = submit(
+                client,
+                incident["incident_id"],
+                feedback_type=feedback_type,
+                root_cause_id=RC_KAFKA_LAG,
+                corrected_root_cause="Actually a Redis failover flap.",
+                validated_fix="Scaled the ledger consumer group.",
+            ).json()
+
+        assert body["diagnosis_outcome"] == diagnosis, feedback_type
+        assert body["resolution_outcome"] == resolution, feedback_type
+
+
+def test_a_rejected_diagnosis_survives_a_later_failed_resolution() -> None:
+    """A rejection must not be laundered into a confirmation by a later outcome."""
+    with make_client(llm=FakeLLM(investigate_then_propose())) as client:
+        incident = open_incident(client)
+        submit(
+            client,
+            incident["incident_id"],
+            feedback_type="DIAGNOSIS_REJECTED",
+        )
+        body = submit(
+            client,
+            incident["incident_id"],
+            feedback_type="RESOLUTION_FAILED",
+            validated_fix="Restarted the consumer group; lag returned.",
+        ).json()
+
+    assert body["diagnosis_outcome"] == "DIAGNOSIS_REJECTED"
+    assert body["resolution_outcome"] == "RESOLUTION_FAILED"
+    assert body["root_cause_id"] is None
