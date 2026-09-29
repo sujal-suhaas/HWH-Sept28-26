@@ -5,8 +5,8 @@ The content phase is complete when every row has a real, public, working URL.
 | Deliverable | Owner | URL |
 | --- | --- | --- |
 | Article | Member A | https://medium.com/@sujalsuhaas2007/our-hindsight-agent-cited-the-fix-but-never-named-the-cause-252c67697d06 |
-| LinkedIn post | Member A | |
-| Reddit post | Member A | |
+| LinkedIn post | Member A | https://www.linkedin.com/feed/update/urn:li:activity:7510733117444231168/ |
+| Reddit post | Member A | https://www.reddit.com/r/aiagents/comments/1wteqk1/a_missing_function_argument_made_our_incident/ |
 | Article | Member B | |
 | LinkedIn post | Member B | |
 | Reddit post | Member B | |
