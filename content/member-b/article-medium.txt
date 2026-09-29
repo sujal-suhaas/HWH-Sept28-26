@@ -1,6 +1,20 @@
 MEDIUM — MEMBER B
 
 ============================================================
+TOPICS (Medium allows 5; type each and pick from autocomplete)
+============================================================
+1. Artificial Intelligence
+2. AI Agents
+3. Machine Learning
+4. Data Science
+5. LLMs
+
+"Data Science" is the differentiator here: this article's hook is dataset design,
+and that tag reaches people who have built an evaluation and watched it lie to
+them. Keeping 4 and 5 different from Member A's set stops the two posts being
+recommended to exactly the same readers.
+
+============================================================
 TITLE FIELD
 ============================================================
 I wrote 52 fake incidents so my agent would have something to remember
