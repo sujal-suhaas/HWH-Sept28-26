@@ -1,0 +1,229 @@
+# Our Hindsight agent cited the fix but never named the cause
+
+We built an on-call incident agent that remembers. It recalls similar past incidents and
+validated runbooks from [Hindsight](https://github.com/vectorize-io/hindsight) before it
+proposes a diagnosis. Then we measured whether remembering actually helped, and the
+measurement said no — while every test passed and nothing logged an error.
+
+The bug was one missing function argument.
+
+---
+
+## What the thing does
+
+DejaOps is an incident-response agent for a fictional payments company. An alert arrives, gets
+normalized into an incident, and the agent works it the way an on-call engineer would: look at
+the service map, recall similar past incidents, look up validated runbooks, then propose a
+diagnosis and a resolution.
+
+Two rules shape the whole design.
+
+**The agent proposes. It never commits.** A model that writes "resolved!" must not be able to
+poison future recall. Only an explicit operator outcome creates authoritative memory — a
+confirmed diagnosis, a confirmed resolution, a correction. Proposals sit in incident state
+marked `proposed` until a human says otherwise.
+
+**Memory is scoped by tags, and metadata is not a filter.** Hindsight distinguishes the two:
+tags are what you recall *by*, metadata is context that travels with a memory. We use tags for
+`service:checkout-api`, `severity:p1`, `event_type:runbook_entry`, and metadata for
+`incident_id`, `runbook_id`, `outcome`. Getting this backwards means filtering on something
+that was never indexed for filtering, which fails quietly.
+
+Here is the split, from `src/memory/schema.py`:
+
+```python
+def tags(self) -> list[str]:
+    """Recall-scoping tags. These are the only values used to filter recall."""
+    tags = [f"environment:{self.environment}"]
+    if self.service:
+        tags.append(f"service:{self.service}")
+    if self.severity:
+        tags.append(f"severity:{self.severity.lower()}")
+    if self.incident_type:
+        tags.append(f"incident_type:{self.incident_type.lower()}")
+    tags.append(f"event_type:{self.event_type.value.lower()}")
+    return tags
+
+def metadata(self) -> dict[str, str]:
+    """Context carried with the memory. Never used for filtering."""
+    meta = {
+        "incident_id": self.incident_id,
+        "event_type": self.event_type.value,
+        "source": self.source,
+        "timestamp": self.timestamp.isoformat(),
+    }
+    if self.runbook_id:
+        meta["runbook_id"] = self.runbook_id
+    return meta
+```
+
+---
+
+## The bug
+
+The agent has five tools. Three read: `recall_similar_incidents`, `lookup_runbook`,
+`get_service_map`. Two propose: `propose_diagnosis`, `propose_resolution`.
+
+Both read paths render their results through one helper, which turns recalled memories into
+text the model can read and cite. Runbook memories carry a `runbook_id` in metadata, and a
+runbook treats exactly one root cause, so the helper annotates each runbook hit with the cause
+it addresses:
+
+```python
+if hit.runbook_id:
+    annotations.append(f"runbook_id={hit.runbook_id}")
+    runbook = catalog.runbook(hit.runbook_id)
+    if runbook is not None:
+        annotations.append(f"root_cause_id={runbook.root_cause_id}")
+```
+
+To do that it needs the catalog. The original signature made the catalog optional:
+
+```python
+def _render_hits(hits: list[RecallHit], catalog: Catalog | None = None) -> str:
+```
+
+`lookup_runbook` passed it. `recall_similar_incidents` did not. It called `_render_hits(hits)`.
+
+So the primary path — the one that runs on every single incident, before anything else — handed
+the model a runbook without telling it which cause that runbook treats.
+
+Nothing raised. `catalog is not None` was false, the annotation was skipped, and the model got a
+perfectly well-formed list of memories. It retrieved the right fix, cited it correctly, and then
+could not name the cause, because we never gave it one.
+
+---
+
+## Why it stayed invisible
+
+This is the part worth dwelling on. Three separate safety nets all failed to catch it, and each
+failed for an interesting reason.
+
+**No error, anywhere.** The code path that skipped the annotation was a legitimate branch. It was
+written to be safe when no catalog was available. It did exactly what it said.
+
+**The test suite covered the wrong path.** There was a test asserting that a rendered hit carries
+the cause it treats. It called `lookup_runbook` — the path that passed the catalog. The tests
+were green and honest; they just tested the branch that worked.
+
+**The headline metric moved, and it moved in a way that looked like a model problem.** We measure
+Root Cause Hit@1: did the agent's first diagnosis name the right root cause. It sat at 0.00. That
+reads like a model that can't reason about causes, which is a plausible thing to believe about a
+model, so it's a comfortable thing to believe. We spent a while tuning prompts.
+
+What actually broke the case was looking at a *different* metric. Validated Fix Hit@1 was climbing
+normally — the agent found the right runbook — while Root Cause Hit@1 stayed flat. A model that
+can't reason would fail both. A model that has the fix and can't name the cause is a model that
+was never told the cause. That asymmetry was the whole diagnosis.
+
+---
+
+## The fix
+
+Requiring the argument:
+
+```python
+def _render_hits(hits: list[RecallHit], catalog: Catalog) -> str:
+```
+
+and deleting the `if catalog is not None` guard, so the omission becomes a `TypeError` at the
+first call instead of a silently thinner prompt.
+
+The default value was the bug. Not a contributing factor — the bug. `catalog: Catalog | None =
+None` meant "there is a legitimate way to call this without a catalog", and there wasn't. There
+was one caller that forgot. Making the parameter required doesn't fix the missing argument; it
+makes the missing argument impossible to express.
+
+We added two tests, and then verified they were worth having by reverting the fix and confirming
+both fail. A test that passes on the broken code is decoration.
+
+---
+
+## What it changed, measured
+
+We evaluate on a pattern that recurs across eight weeks of synthetic incident history: a
+`fraud-scorer` timeout, where the same alert shape appears six times and only later occurrences
+carry a confirmed root cause and a validated runbook. The history at cutoff *K* never contains the
+incident being evaluated, so the model can't have memorised the answer.
+
+With memory ON, evaluated at four history cutoffs:
+
+| history cutoff | Root Cause Hit@1 | Validated Fix Hit@1 |
+| --- | --- | --- |
+| 2 | 0.00 | 0.00 |
+| 3 | 1.00 | 0.00 |
+| 4 | 1.00 | 1.00 |
+| 5 | 1.00 | 1.00 |
+
+The ladder is the point: at cutoff 2 there is no resolved precedent to recall, so the agent has
+nothing, and from cutoff 3 onward — once a confirmed outcome exists in memory — it names the cause.
+That's memory doing the work, not the alert text.
+
+**The caveat belongs here, not in a footnote.** That table is one pattern, one run per cutoff,
+`n = 1`. It is a ladder, not a rate, and 0.75/0.5 averages across four rows would be a
+meaningless number dressed up as a benchmark. We report the rows.
+
+We also run a teach-then-replay case on an incident deliberately absent from history:
+
+| | before teach | after teach |
+| --- | --- | --- |
+| named root cause | none | correct |
+| Root Cause Hit@1 | false | true |
+| Validated Fix Hit@1 | false | true |
+| grounded in a cited memory | false | true |
+| memories cited | 0 | 2 |
+
+"Before teach" is a real run against an empty bank, not a mock. The operator then confirms the
+actual cause and fix, which is what writes the memory, and the same alert is replayed.
+
+Both replays are in the log, one line apart. Before the fix, the "after teach" row read
+`named root cause: none, Root Cause Hit@1: false` — the agent had the taught memory in the bank,
+recalled it, cited it, and still couldn't name the cause, because the annotation was still missing.
+The only thing that changed between the two replays is the one function signature. That pair of
+lines is the bug and its fix, recorded by the system rather than asserted by me.
+
+---
+
+## What I'd tell someone building this
+
+**An omission with no error is harder to find than a bug that throws.** The failure mode here
+wasn't wrong output, it was *less* input. The prompt got thinner and the model got blamed. If a
+value is required for a computation to be meaningful, make it required in the signature, even when
+the surrounding code has a convenient `None` path.
+
+**Watch for two metrics that should move together and don't.** The single most useful signal was
+the asymmetry between finding the fix and naming the cause. We'd been staring at one number when
+the comparison was the information.
+
+**Write the test against the path that runs, not the path that's easy to call.** Our coverage
+looked fine because the helper was tested through one of its two callers.
+
+---
+
+## Limits
+
+The evaluation is on synthetic incident history we generated, so it measures whether the agent can
+recover a planted pattern, not whether it helps on real production incidents. The ladder is four
+runs on one pattern of six; we have not run it across every pattern.
+
+The fallback model doesn't work well as a fallback. Our requests exceed its free-tier output
+tokens-per-minute limit, so a fallback is usually a slower failure. It's classified as retryable,
+which means it spends about thirty seconds before failing identically. We left it visible rather
+than hiding it — the run records which model answered.
+
+There is no memory expiry. An operator who confirms a wrong cause in a hurry creates a wrong
+precedent, and it stays. That's the first thing I'd add: a confidence or recency signal on
+confirmed outcomes, so a memory can be superseded rather than only accumulated.
+
+The seed data is 52 incidents across eight weeks. Small enough to reason about by hand, which is
+why we could find the annotation bug at all, and far too small to say anything about scale.
+
+---
+
+If you're building agents that need to remember across sessions, the interesting part isn't the
+recall call — it's the write path and what you refuse to write. [Hindsight](https://github.com/vectorize-io/hindsight)
+gave us a memory layer where tags and metadata are genuinely different tools, which made the
+confirmation boundary enforceable rather than aspirational. The
+[docs](https://docs.hindsight.vectorize.io/) are worth reading before you design your schema, and
+[this piece on agent memory](https://vectorize.io/what-is-agent-memory) is a good framing for why
+the distinction matters.
