@@ -37,6 +37,11 @@ people's heads and in old Slack threads.
 The UI shows a memory ON/OFF toggle so the effect of memory is directly observable on the same
 alert with the same model configuration.
 
+After an operator confirms both the diagnosis and the resolution, the timeline records the
+confirmation and the state that produced it:
+
+![The incident timeline after an operator confirmed the diagnosis and the resolution](docs/images/incident-timeline-confirmed.png)
+
 ---
 
 ## Where Hindsight sits
@@ -98,6 +103,16 @@ than a near-miss dressed up as evidence.
 Both modes use the same normalized alert, the same model configuration, and the same system prompt.
 The only difference is memory availability and the memory-derived context block.
 
+Same alert, same model, same prompt. These two images are from real runs against the real Hindsight
+bank — not from the test harness, whose model is a fake:
+
+| memory ON | memory OFF |
+| --- | --- |
+| ![The agent proposes a diagnosis naming RC-001, citing three recalled memories](docs/images/memory-on-proposal.png) | ![The same alert with memory off: low confidence and nothing cited](docs/images/memory-off-proposal.png) |
+
+With memory ON the agent named the root cause and cited the memories it reasoned from. With memory
+off it has no precedent to point at, so it says so and sets confidence to low.
+
 The Memory Inspector distinguishes four states explicitly, and never invents a memory:
 
 ```
@@ -116,6 +131,11 @@ In the UI the toggle is per-request, so the same alert can be run both ways
 without restarting anything. Each incident carries the mode it ran in, and the
 **Re-run with memory off/on** button replays the current alert in the other mode
 — which is the whole comparison in one click.
+
+The Inspector shows each recall and retain attempt with its own outcome. Recalls and the three
+retains that a confirmed outcome produces:
+
+![The Memory Inspector listing recall and retain attempts with their hit counts](docs/images/memory-inspector.png)
 
 ### Degradation policy
 
@@ -216,6 +236,15 @@ alert ──▶ FastAPI ──▶ incident (SQLite: source of truth for state + 
 
 The agent may *propose*. Only the backend lifecycle may *commit* an authoritative memory.
 
+The same map with the Memory Bank and the confirmation boundary drawn in. The bank is one container
+behind one adapter file, and only one of the two arrows into the store is a write:
+
+![Architecture: the agent's read path and the backend lifecycle's authoritative write path into Hindsight](docs/images/architecture.png)
+
+A generated copy lives at `docs/images/architecture.png`; `frontend/tools/capture-diagram.mjs`
+renders it from the mermaid block in [`docs/architecture.md`](docs/architecture.md) so the two cannot
+drift apart.
+
 ---
 
 ## Status
@@ -236,10 +265,22 @@ Phase 0–5:
 - [x] Playwright happy path
 - [x] Learning evaluation with measured results — one pattern ladder and one teach replay, both on
       the primary model. See [`docs/architecture.md`](docs/architecture.md) §10.7
-- [ ] Screenshots from a live run. Attempted; blocked on the free tier (the primary had 1,844 of
-      200,000 daily tokens left, and the fallback rejects the request size — issue #25). Harness
-      captures with a fake model were deleted rather than shipped, because a README image of a fake
-      model pretending to be the product is worse than no image.
+- [x] Screenshots from a live run, captured against the real Hindsight bank and the real models —
+      see [`docs/images/`](docs/images). The capture tools are committed in `frontend/tools/`, so
+      the images can be regenerated rather than trusted. Capturing them found two real bugs, both
+      since fixed: a completed run that proposed nothing left the incident stuck in `DIAGNOSING`
+      (#39), and confirming a resolution reset the diagnosis card to "proposed" on a resolved
+      incident (#40, #41).
+
+Seeding the bank and evaluating the learning curve, as actually run:
+
+![The seed command retaining 145 events, then the learning-curve table](docs/images/seed-and-evaluation.png)
+
+The `overall` line reads `root_cause_hit_at_1: 0.75`, `validated_fix_hit_at_1: 0.5`,
+`grounded_response_rate: 1.0`, `fallback_runs: 0`, `models_used: ["openai/gpt-oss-120b"]`. Those
+figures are four runs at four history cutoffs on **one** pattern, and the caveat travels with them:
+`n = 1` per cutoff, so this is a ladder, not a rate. See
+[`docs/architecture.md`](docs/architecture.md) §10.7.
 
 See [`docs/architecture.md`](docs/architecture.md) for the verified Hindsight
 behaviour this design depends on, and why each decision was made. §10.8 records
