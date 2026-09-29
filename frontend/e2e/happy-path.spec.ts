@@ -59,6 +59,11 @@ test.describe('incident happy path', () => {
     await expect(page.getByTestId('operator-outcome')).toContainText('RESOLUTION_CONFIRMED')
     await expect(page.getByTestId('operator-outcome')).toContainText('RB-014')
 
+    // The diagnosis card must survive the later resolution confirmation. It was
+    // asserted a step earlier, where it was still correct, which is how a card
+    // reading "proposed" on a resolved incident got past a green run.
+    await expect(diagnosis.getByTestId('proposal-state')).toHaveText('confirmed by operator')
+
     // 8. A closed outcome is closed.
     await expect(feedback.getByText(/This incident is RESOLVED/)).toBeVisible()
 
