@@ -421,3 +421,58 @@ def test_apply_agent_run_accepts_a_proposal_from_a_later_chat_turn() -> None:
     assert updated.proposed_resolution is not None
     assert updated.proposed_resolution.status == "pending_confirmation"
     assert updated.proposed_resolution.runbook_id == RB_LEDGER_CONSUMER_GROUP
+
+
+def test_a_completed_run_that_proposed_nothing_does_not_wait_forever() -> None:
+    """A finished run must not leave the incident looking busy.
+
+    Found on a live run: the agent recalled the right runbook and then stopped
+    without proposing. `agent_status` read `completed` while the state read
+    `DIAGNOSING`, so the incident sat there waiting on a process that had already
+    stopped - and nothing ever moved it. The agent's turn is over either way, so
+    the next move is the operator's.
+    """
+    incident = make_incident(state=IncidentState.DIAGNOSING, proposed_diagnosis=None)
+
+    updated = lifecycle.apply_agent_run(
+        incident,
+        make_run(diagnosis=None, resolution=None, tool_calls=[], memory_trace_ids=[]),
+    )
+
+    assert updated.agent_status == "completed"
+    assert updated.proposed_diagnosis is None
+    assert updated.state is IncidentState.WAITING_FOR_OPERATOR
+
+
+def test_a_completed_run_with_nothing_to_propose_still_says_so() -> None:
+    """The state moves, but the timeline must not imply the agent concluded."""
+    incident = make_incident(state=IncidentState.OPEN, proposed_diagnosis=None)
+
+    updated = lifecycle.apply_agent_run(
+        incident,
+        make_run(diagnosis=None, resolution=None, tool_calls=[], memory_trace_ids=[]),
+    )
+
+    finished = [e for e in updated.timeline if e.event == "agent_run_finished"]
+    assert finished and "0 cited" in finished[0].detail
+
+
+def test_a_completed_run_does_not_move_an_incident_that_is_already_resolving() -> None:
+    """Only the OPEN/DIAGNOSING states are the agent's to end."""
+    incident = make_incident(state=IncidentState.RESOLVING)
+
+    updated = lifecycle.apply_agent_run(incident, make_run())
+
+    assert updated.state is IncidentState.RESOLVING
+
+
+def test_a_failed_run_leaves_the_state_alone() -> None:
+    """A failed run is not a finished turn, so it must not look like one."""
+    incident = make_incident(state=IncidentState.DIAGNOSING, proposed_diagnosis=None)
+
+    updated = lifecycle.apply_agent_run(
+        incident,
+        make_run(status=AgentStatus.MODEL_FAILED, diagnosis=None, error="boom"),
+    )
+
+    assert updated.state is IncidentState.DIAGNOSING

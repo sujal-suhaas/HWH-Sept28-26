@@ -190,10 +190,13 @@ def apply_agent_run(incident: IncidentResponse, run) -> IncidentResponse:  # noq
         timeline.append(
             TimelineEntry(actor="agent", event="agent_run_finished", detail=detail)
         )
-        if diagnosis is not None:
+        if incident.state in {IncidentState.OPEN, IncidentState.DIAGNOSING}:
+            # A completed run ends the agent's turn, so the next move is the
+            # operator's - whether or not it proposed something. Leaving it in
+            # DIAGNOSING said work was still happening while agent_status said
+            # `completed`, and the incident sat there forever waiting for a
+            # process that had already stopped.
             state = IncidentState.WAITING_FOR_OPERATOR
-        elif incident.state in {IncidentState.OPEN, IncidentState.DIAGNOSING}:
-            state = IncidentState.DIAGNOSING
         else:
             state = incident.state
 
@@ -417,6 +420,12 @@ def apply_feedback(
         "operator": feedback.operator,
         "updated_at": utcnow(),
     }
+    # Record the outcome against its own kind. INCONCLUSIVE closes the incident
+    # without settling either proposal, so it belongs to neither slot.
+    if feedback.is_authoritative_diagnosis():
+        updates["diagnosis_outcome"] = feedback.feedback_type
+    elif feedback.feedback_type is not FeedbackType.INCONCLUSIVE:
+        updates["resolution_outcome"] = feedback.feedback_type
     if feedback.root_cause_id:
         updates["root_cause_id"] = feedback.root_cause_id
     if feedback.validated_runbook_id:
